@@ -14,6 +14,11 @@ import (
 var confFile string
 var function string
 
+type Msg struct {
+	ChainId uint64
+	Err     error
+}
+
 type token struct {
 	ChainId uint64
 	Address string
@@ -38,7 +43,7 @@ func main() {
 	switch function {
 	case "shutCCM":
 		args := flag.Args()
-		sig := make(chan config.Msg, 10)
+		sig := make(chan Msg, 10)
 		cnt := 0
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
@@ -53,7 +58,10 @@ func main() {
 			if err != nil {
 				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
 			}
-			go shutTools.ShutCCM(sig, client, netCfg)
+			go func() {
+				err = shutTools.ShutCCM(client, netCfg)
+				sig<-Msg{netCfg.PolyChainID,err}
+			}()
 			cnt += 1
 		}
 		for msg := range sig {
@@ -69,7 +77,7 @@ func main() {
 		}
 	case "restartCCM":
 		args := flag.Args()
-		sig := make(chan config.Msg, 10)
+		sig := make(chan Msg, 10)
 		cnt := 0
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
@@ -84,7 +92,10 @@ func main() {
 			if err != nil {
 				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
 			}
-			go shutTools.RestartCCM(sig, client, netCfg)
+			go func() {
+				err = shutTools.RestartCCM(client, netCfg)
+				sig<-Msg{netCfg.PolyChainID,err}
+			}()
 			cnt += 1
 		}
 		for msg := range sig {
@@ -100,7 +111,7 @@ func main() {
 		}
 	case "shutToken":
 		args := flag.Args()
-		sig := make(chan config.Msg, 10)
+		sig := make(chan Msg, 10)
 		if len(args)%2 != 0 {
 			log.Fatalf("invalid arg amount %d ,must be even", len(args))
 		}
@@ -125,7 +136,7 @@ func main() {
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
 				if err != nil {
 					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
-					sig <- config.Msg{tokens[i].ChainId, err}
+					sig <- Msg{tokens[i].ChainId, err}
 					return
 				}
 				for j := 0; j < len(tokens); j++ {
@@ -144,11 +155,11 @@ func main() {
 							tokens[i].ChainId,
 							tokens[j].ChainId,
 							err)
-						sig <- config.Msg{tokens[i].ChainId, err}
+						sig <- Msg{tokens[i].ChainId, err}
 						return
 					}
 				}
-				sig <- config.Msg{tokens[i].ChainId, nil}
+				sig <- Msg{tokens[i].ChainId, nil}
 			}()
 		}
 		cnt := len(tokens)
@@ -165,7 +176,7 @@ func main() {
 		}
 	case "rebindToken":
 		args := flag.Args()
-		sig := make(chan config.Msg, 10)
+		sig := make(chan Msg, 10)
 		if len(args)%2 != 0 {
 			log.Fatalf("invalid arg amount %d ,must be even", len(args))
 		}
@@ -190,7 +201,7 @@ func main() {
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
 				if err != nil {
 					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
-					sig <- config.Msg{tokens[i].ChainId, err}
+					sig <- Msg{tokens[i].ChainId, err}
 					return
 				}
 				for j := 0; j < len(tokens); j++ {
@@ -209,11 +220,11 @@ func main() {
 							tokens[i].ChainId,
 							tokens[j].ChainId,
 							err)
-						sig <- config.Msg{tokens[i].ChainId, err}
+						sig <- Msg{tokens[i].ChainId, err}
 						return
 					}
 				}
-				sig <- config.Msg{tokens[i].ChainId, nil}
+				sig <- Msg{tokens[i].ChainId, nil}
 			}()
 		}
 		cnt := len(tokens)

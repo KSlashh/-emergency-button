@@ -17,73 +17,51 @@ import (
 
 var DefaultGasLimit uint64 = 300000
 
-func ShutCCM(ch chan config.Msg, client *ethclient.Client, conf *config.Network) error {
+func ShutCCM(client *ethclient.Client, conf *config.Network) error {
 	privateKey, err := crypto.HexToECDSA(conf.CCMPOwnerPrivateKey)
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return  fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
 	CCMPContract, err := abi.NewICCMP(conf.CCMPAddress, client)
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return  fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
 	auth, err := MakeAuth(client, privateKey, DefaultGasLimit)
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return  fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
 	tx, err := CCMPContract.PauseEthCrossChainManager(auth)
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return  fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
 	err = WaitTxConfirm(client, tx.Hash())
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return  fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
-	ch <- config.Msg{conf.PolyChainID, nil}
 	return nil
 }
 
-func RestartCCM(ch chan config.Msg, client *ethclient.Client, conf *config.Network) error {
+func RestartCCM(client *ethclient.Client, conf *config.Network) error {
 	privateKey, err := crypto.HexToECDSA(conf.CCMPOwnerPrivateKey)
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
 	CCMPContract, err := abi.NewICCMP(conf.CCMPAddress, client)
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
 	auth, err := MakeAuth(client, privateKey, DefaultGasLimit)
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
 	tx, err := CCMPContract.UnpauseEthCrossChainManager(auth)
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
 	err = WaitTxConfirm(client, tx.Hash())
 	if err != nil {
-		err = fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-		ch <- config.Msg{conf.PolyChainID, err}
-		return err
+		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
-	ch <- config.Msg{conf.PolyChainID, nil}
 	return nil
 }
 

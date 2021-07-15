@@ -6,10 +6,6 @@ import (
 	"io/ioutil"
 )
 
-type Msg struct {
-	ChainId uint64
-	Err     error
-}
 
 type Network struct {
 	PolyChainID              uint64
