@@ -13,6 +13,7 @@ import (
 
 var confFile string
 var function string
+var multiple float64
 
 type Msg struct {
 	ChainId uint64
@@ -27,6 +28,7 @@ type token struct {
 
 func init() {
 	flag.StringVar(&confFile, "conf", "./config.json", "configuration file path")
+	flag.Float64Var(&multiple, "mul", 1, "multiple of gasPrice, actual_gasPrice = suggested_gasPrice * mul ")
 	flag.StringVar(&function, "func", "", "choose function to run:\n"+
 		"  shutCCM [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
 		"  restartCCM [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
@@ -49,7 +51,7 @@ func main() {
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
-				log.Errorf("can not parse arg %d : %s , %s", i, args[i], err)
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
 			}
 			netCfg := conf.GetNetwork(uint64(id))
 			if netCfg == nil {
@@ -61,7 +63,7 @@ func main() {
 			}
 			go func() {
 				log.Infof("Shutting down %s ...",netCfg.Name)
-				err = shutTools.ShutCCM(client, netCfg)
+				err = shutTools.ShutCCM(multiple, client, netCfg)
 				sig<-Msg{netCfg.PolyChainID,err}
 			}()
 			cnt += 1
@@ -72,10 +74,10 @@ func main() {
 				log.Error(msg.Err)
 			} else {
 				log.Infof("CCM at chain %d has been shut down.", msg.ChainId)
-				if cnt == 0 {
-					log.Info("Done.")
-					break
-				}
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
 			}
 		}
 	case "restartCCM":
@@ -86,7 +88,7 @@ func main() {
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
-				log.Errorf("can not parse arg %d : %s , %s", i, args[i], err)
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
 			}
 			netCfg := conf.GetNetwork(uint64(id))
 			if netCfg == nil {
@@ -98,7 +100,7 @@ func main() {
 			}
 			go func() {
 				log.Infof("Restarting %s ...",netCfg.Name)
-				err = shutTools.RestartCCM(client, netCfg)
+				err = shutTools.RestartCCM(multiple, client, netCfg)
 				sig<-Msg{netCfg.PolyChainID,err}
 			}()
 			cnt += 1
@@ -126,7 +128,7 @@ func main() {
 		for i := 0; i < len(args); i += 2 {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
-				log.Fatalf("can not parse arg %d : %s , %s", i, args[i], err)
+				log.Fatalf("can not parse arg %d : %s , %v", i, args[i], err)
 			}
 			address := args[i+1]
 			if !common.IsHexAddress(address) {
@@ -152,6 +154,7 @@ func main() {
 						continue
 					}
 					err = shutTools.BindToken(
+						multiple,
 						client,
 						tokens[i].NetCfg,
 						common.HexToAddress(tokens[i].Address),
@@ -195,7 +198,7 @@ func main() {
 		for i := 0; i < len(args); i += 2 {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
-				log.Fatalf("can not parse arg %d : %s , %s", i, args[i], err)
+				log.Fatalf("can not parse arg %d : %s , %v", i, args[i], err)
 			}
 			address := args[i+1]
 			if !common.IsHexAddress(address) {
@@ -221,6 +224,7 @@ func main() {
 						continue
 					}
 					err = shutTools.BindToken(
+						multiple,
 						client,
 						tokens[i].NetCfg,
 						common.HexToAddress(tokens[i].Address),

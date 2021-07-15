@@ -11,13 +11,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"math"
 	"math/big"
 	"time"
 )
 
 var DefaultGasLimit uint64 = 300000
+var gasMultipleDecimal int64 = 8
 
-func ShutCCM(client *ethclient.Client, conf *config.Network) error {
+func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
 	privateKey, err := crypto.HexToECDSA(conf.CCMPOwnerPrivateKey)
 	if err != nil {
 		return  fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
@@ -26,7 +28,7 @@ func ShutCCM(client *ethclient.Client, conf *config.Network) error {
 	if err != nil {
 		return  fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit)
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple)
 	if err != nil {
 		return  fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
@@ -41,7 +43,7 @@ func ShutCCM(client *ethclient.Client, conf *config.Network) error {
 	return nil
 }
 
-func RestartCCM(client *ethclient.Client, conf *config.Network) error {
+func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
 	privateKey, err := crypto.HexToECDSA(conf.CCMPOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
@@ -50,7 +52,7 @@ func RestartCCM(client *ethclient.Client, conf *config.Network) error {
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit)
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
@@ -65,7 +67,7 @@ func RestartCCM(client *ethclient.Client, conf *config.Network) error {
 	return nil
 }
 
-func BindToken(client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64, toAsset []byte) error {
+func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64, toAsset []byte) error {
 	privateKey, err := crypto.HexToECDSA(conf.LockProxyOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
@@ -88,7 +90,7 @@ func BindToken(client *ethclient.Client, conf *config.Network, token common.Addr
 				toChainId),
 			err)
 	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit)
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -124,7 +126,7 @@ func BindToken(client *ethclient.Client, conf *config.Network, token common.Addr
 	return nil
 }
 
-func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64) (*bind.TransactOpts, error) {
+func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64, gasMultiple float64) (*bind.TransactOpts, error) {
 	authAddress := crypto.PubkeyToAddress(*key.Public().(*ecdsa.PublicKey))
 	nonce, err := client.PendingNonceAt(context.Background(), authAddress)
 	if err != nil {
@@ -134,6 +136,14 @@ func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64) 
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("makeAuth, get suggest gas price err: %v", err)
+	}
+	res := gasPrice.Mul(gasPrice, big.NewInt(int64(gasMultiple*math.Pow(10,float64(gasMultipleDecimal)))))
+	if res == nil {
+		return nil, fmt.Errorf("calculate actual gas price error (at mul")
+	}
+	res = gasPrice.Div(gasPrice, big.NewInt(int64(math.Pow(10,float64(gasMultipleDecimal)))))
+	if res == nil {
+		return nil, fmt.Errorf("calculate actual gas price error (at div")
 	}
 
 	auth := bind.NewKeyedTransactor(key)
