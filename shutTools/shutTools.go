@@ -126,7 +126,7 @@ func BindToken(client *ethclient.Client, conf *config.Network, token common.Addr
 
 func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64) (*bind.TransactOpts, error) {
 	authAddress := crypto.PubkeyToAddress(*key.Public().(*ecdsa.PublicKey))
-	nonce, err := client.NonceAt(context.Background(), authAddress, nil)
+	nonce, err := client.PendingNonceAt(context.Background(), authAddress)
 	if err != nil {
 		return nil, fmt.Errorf("makeAuth, addr %s, err %v", authAddress.Hex(), err)
 	}

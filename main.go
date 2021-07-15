@@ -42,6 +42,7 @@ func main() {
 	}
 	switch function {
 	case "shutCCM":
+		log.Info("Processing...")
 		args := flag.Args()
 		sig := make(chan Msg, 10)
 		cnt := 0
@@ -59,6 +60,7 @@ func main() {
 				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
 			}
 			go func() {
+				log.Infof("Shutting down %s ...",netCfg.Name)
 				err = shutTools.ShutCCM(client, netCfg)
 				sig<-Msg{netCfg.PolyChainID,err}
 			}()
@@ -72,10 +74,12 @@ func main() {
 				log.Infof("CCM at chain %d has been shut down.", msg.ChainId)
 				if cnt == 0 {
 					log.Info("Done.")
+					break
 				}
 			}
 		}
 	case "restartCCM":
+		log.Info("Processing...")
 		args := flag.Args()
 		sig := make(chan Msg, 10)
 		cnt := 0
@@ -93,6 +97,7 @@ func main() {
 				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
 			}
 			go func() {
+				log.Infof("Restarting %s ...",netCfg.Name)
 				err = shutTools.RestartCCM(client, netCfg)
 				sig<-Msg{netCfg.PolyChainID,err}
 			}()
@@ -107,9 +112,11 @@ func main() {
 			}
 			if cnt == 0 {
 				log.Info("Done.")
+				break
 			}
 		}
 	case "shutToken":
+		log.Info("Processing...")
 		args := flag.Args()
 		sig := make(chan Msg, 10)
 		if len(args)%2 != 0 {
@@ -132,7 +139,8 @@ func main() {
 			tokens = append(tokens, &token{uint64(id), address, netCfg})
 		}
 		for i := 0; i < len(tokens); i++ {
-			go func() {
+			go func(i int) {
+				log.Infof("Shutting down token for %s...",tokens[i].NetCfg.Name)
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
 				if err != nil {
 					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
@@ -158,9 +166,10 @@ func main() {
 						sig <- Msg{tokens[i].ChainId, err}
 						return
 					}
+					log.Infof("%d =>to=> %d pair has be unbind",tokens[i].ChainId,tokens[j].ChainId)
 				}
 				sig <- Msg{tokens[i].ChainId, nil}
-			}()
+			}(i)
 		}
 		cnt := len(tokens)
 		for msg := range sig {
@@ -172,9 +181,11 @@ func main() {
 			}
 			if cnt == 0 {
 				log.Info("Done.")
+				break
 			}
 		}
 	case "rebindToken":
+		log.Info("Processing...")
 		args := flag.Args()
 		sig := make(chan Msg, 10)
 		if len(args)%2 != 0 {
@@ -197,7 +208,8 @@ func main() {
 			tokens = append(tokens, &token{uint64(id), address, netCfg})
 		}
 		for i := 0; i < len(tokens); i++ {
-			go func() {
+			go func(i int) {
+				log.Infof("Rebinding for %s...",tokens[i].NetCfg.Name)
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
 				if err != nil {
 					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
@@ -213,7 +225,7 @@ func main() {
 						tokens[i].NetCfg,
 						common.HexToAddress(tokens[i].Address),
 						tokens[j].ChainId,
-						[]byte(tokens[i].Address))
+						common.FromHex(tokens[j].Address))
 					if err != nil {
 						err = fmt.Errorf(
 							"fail to shut bind from chain %d =>to=> chain %d , %s",
@@ -223,9 +235,10 @@ func main() {
 						sig <- Msg{tokens[i].ChainId, err}
 						return
 					}
+					log.Infof("%d =>to=> %d pair has be rebind",tokens[i].ChainId,tokens[j].ChainId)
 				}
 				sig <- Msg{tokens[i].ChainId, nil}
-			}()
+			}(i)
 		}
 		cnt := len(tokens)
 		for msg := range sig {
@@ -237,6 +250,7 @@ func main() {
 			}
 			if cnt == 0 {
 				log.Info("Done.")
+				break
 			}
 		}
 	default:
