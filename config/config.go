@@ -21,6 +21,16 @@ type Config struct {
 	Networks []Network
 }
 
+type Token struct {
+	PolyChainId   uint64
+	Address       common.Address
+}
+
+type TokenConfig struct {
+	Name    string
+	Tokens  []Token
+}
+
 // LoadConfig ...
 func LoadConfig(confFile string) (config *Config, err error) {
 	jsonBytes, err := ioutil.ReadFile(confFile)
@@ -41,4 +51,15 @@ func (c *Config) GetNetwork(index uint64) (netConfig *Network) {
 		}
 	}
 	return nil
+}
+
+func LoadToken(tokenFile string) (tokens *TokenConfig, err error) {
+	jsonBytes, err := ioutil.ReadFile(tokenFile)
+	if err != nil {
+		return
+	}
+
+	tokens = &TokenConfig{}
+	err = json.Unmarshal(jsonBytes, tokens)
+	return
 }

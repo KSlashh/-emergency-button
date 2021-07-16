@@ -7,7 +7,7 @@ go build -o boom
 ````
 
 ## setup config file
-例如：
+config.json , 例如：
 ````
 {
   "Networks": [
@@ -53,37 +53,75 @@ go build -o boom
   ]
 }
 ````
-
+token.json , 例如：
+````
+{
+  "Name":"sampleToken",
+  "Tokens":[
+    {
+      "PolyChainId":2,
+      "Address":"0xad3f96ae966ad60347f31845b7e4b333104c52fb"
+    },
+    {
+      "PolyChainId":79,
+      "Address":"0xB60e03E6973B1d0b90a763f5B64C48ca7cB8c2d1"
+    },
+    {
+      "PolyChainId":7,
+      "Address":"0xc4e419CC0945dC9860A73B3A2cAcAA12aD7CF3B8"
+    },
+    {
+      "PolyChainId":12,
+      "Address":"0x9a3658864aa2ccc63fa61eaad5e4f65fa490ca7d"
+    }
+  ]
+}
+````
 ## shut down CCM
 例如 关掉 bsc(79) 和 ok(200) 的CCM：
 ````
-./boom -func shutCCM -conf sampleConfig.json shutCCM 79 200
+./boom -func shutCCM -conf sampleTestnetConfig.json shutCCM 79 200
 ````
 
 ## restart CCM
 ````
-./boom -func restartCCM -conf sampleConfig.json shutCCM 79 200
+./boom -func restartCCM -conf sampleTestnetConfig.json shutCCM 79 200
 ````
 
 ## shut down Token
 例如 停掉eth，bsc及heco之间的USDT
+配置如下 USDT.json
 ````
-eth USDT : 0xad3f96ae966ad60347f31845b7e4b333104c52fb
-bsc USDT : 0x23F5075740c2C99C569FfD0768c383A92d1a4aD7
-heco USDT : 0x7698Da475B3132F37E40DE8C222d7D74d3A4172d	
+{
+  "Name":"USDT",
+  "Tokens":[
+    {
+      "PolyChainId":2,
+      "Address":"0xad3f96ae966ad60347f31845b7e4b333104c52fb"
+    },
+    {
+      "PolyChainId":79,
+      "Address":"0xB60e03E6973B1d0b90a763f5B64C48ca7cB8c2d1"
+    },
+    {
+      "PolyChainId":7,
+      "Address":"0xc4e419CC0945dC9860A73B3A2cAcAA12aD7CF3B8"
+    }
+  ]
+}
 ````
 执行：
 ````
-./boom -func shutToken -conf sampleConfig.json 2 0xad3f96ae966ad60347f31845b7e4b333104c52fb 79 0x23F5075740c2C99C569FfD0768c383A92d1a4aD7 6 0x7698Da475B3132F37E40DE8C222d7D74d3A4172d 
+./boom -func shutToken -conf sampleTestnetConfig.json -token USDT.json 
 ````
 
 ## rebind Token
 ````
-./boom -func rebindToken -conf sampleConfig.json 2 0xad3f96ae966ad60347f31845b7e4b333104c52fb 79 0x23F5075740c2C99C569FfD0768c383A92d1a4aD7 6 0x7698Da475B3132F37E40DE8C222d7D74d3A4172d 
+./boom -func rebindToken -conf sampleTestnetConfig.json -token USDT.json
 ````
 
 ## multiple gas price
-用`-mul`来提高gas price，例如 `-mul 6` 意思是按照推荐gas price的十倍发出交易
+用`-mul`来提高gas price，例如 `-mul 6` 意思是按照推荐gas price的6倍发出交易
 ````
-./boom  -mul 6 -func shutCCM -conf sampleConfig.json shutCCM 79 200
+./boom -mul 6 -func shutCCM -conf sampleConfig.json shutCCM 79 200
 ````

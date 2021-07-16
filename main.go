@@ -12,6 +12,7 @@ import (
 )
 
 var confFile string
+var tokenFile string
 var function string
 var multiple float64
 
@@ -22,18 +23,20 @@ type Msg struct {
 
 type token struct {
 	ChainId uint64
-	Address string
+	Address common.Address
 	NetCfg  *config.Network
 }
 
 func init() {
+	flag.StringVar(&tokenFile, "token", "./token.json", "token configuration file path")
 	flag.StringVar(&confFile, "conf", "./config.json", "configuration file path")
 	flag.Float64Var(&multiple, "mul", 1, "multiple of gasPrice, actual_gasPrice = suggested_gasPrice * mul ")
 	flag.StringVar(&function, "func", "", "choose function to run:\n"+
-		"  shutCCM [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
-		"  restartCCM [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
-		"  shutToken [chainID-1] [tokenAddress-1] ... [chainId-n] [tokenAddress-n] \n"+
-		"  rebindToken [chainID-1] [tokenAddress-1] ... [chainId-n] [tokenAddress-n]")
+		"  -func shutCCM -mul {1} -conf {./config.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
+		"  -func restartCCM -mul {1} -conf {./config.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
+		"  -func shutToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
+		"  -func rebindToken -mul {1} -conf {./config.json} -token {./token.json} \n" +
+		"  {}contains default value")
 	flag.Parse()
 }
 
@@ -117,6 +120,137 @@ func main() {
 				break
 			}
 		}
+	case "shutToken":
+		log.Info("Processing...")
+		tokenConfig, err := config.LoadToken(tokenFile)
+		if err != nil {
+			log.Fatal("LoadToken fail", err)
+		}
+		sig := make(chan Msg, 10)
+		var tokens []*token
+		for i := 0; i < len(tokenConfig.Tokens); i++ {
+			id := tokenConfig.Tokens[i].PolyChainId
+			address := tokenConfig.Tokens[i].Address
+			netCfg := conf.GetNetwork(id)
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in config file", id)
+			}
+			tokens = append(tokens, &token{uint64(id), address, netCfg})
+		}
+		for i := 0; i < len(tokens); i++ {
+			go func(i int) {
+				log.Infof("Shutting down %s at %s...",tokenConfig.Name ,tokens[i].NetCfg.Name)
+				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
+					sig <- Msg{tokens[i].ChainId, err}
+					return
+				}
+				for j := 0; j < len(tokens); j++ {
+					if i == j {
+						continue
+					}
+					err = shutTools.BindToken(
+						multiple,
+						client,
+						tokens[i].NetCfg,
+						tokens[i].Address,
+						tokens[j].ChainId,
+						nil)
+					if err != nil {
+						err = fmt.Errorf(
+							"fail to shut %s from chain %d =>to=> chain %d , %s",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							err)
+						sig <- Msg{tokens[i].ChainId, err}
+						return
+					}
+					log.Infof("%s: %d =>to=> %d pair has be unbind",tokenConfig.Name,tokens[i].ChainId,tokens[j].ChainId)
+				}
+				sig <- Msg{tokens[i].ChainId, nil}
+			}(i)
+		}
+		cnt := len(tokens)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("%s at chain %d has been shut down.",tokenConfig.Name ,msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "rebindToken":
+		log.Info("Processing...")
+		tokenConfig, err := config.LoadToken(tokenFile)
+		if err != nil {
+			log.Fatal("LoadToken fail", err)
+		}
+		sig := make(chan Msg, 10)
+		var tokens []*token
+		for i := 0; i < len(tokenConfig.Tokens); i++ {
+			id := tokenConfig.Tokens[i].PolyChainId
+			address := tokenConfig.Tokens[i].Address
+			netCfg := conf.GetNetwork(id)
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in config file", id)
+			}
+			tokens = append(tokens, &token{uint64(id), address, netCfg})
+		}
+		for i := 0; i < len(tokens); i++ {
+			go func(i int) {
+				log.Infof("Rebinding %s at %s...",tokenConfig.Name ,tokens[i].NetCfg.Name)
+				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
+					sig <- Msg{tokens[i].ChainId, err}
+					return
+				}
+				for j := 0; j < len(tokens); j++ {
+					if i == j {
+						continue
+					}
+					err = shutTools.BindToken(
+						multiple,
+						client,
+						tokens[i].NetCfg,
+						tokens[i].Address,
+						tokens[j].ChainId,
+						tokens[j].Address.Bytes())
+					if err != nil {
+						err = fmt.Errorf(
+							"fail to rebind %s from chain %d =>to=> chain %d , %s",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							err)
+						sig <- Msg{tokens[i].ChainId, err}
+						return
+					}
+					log.Infof("%s: %d =>to=> %d pair has be rebind",tokenConfig.Name,tokens[i].ChainId,tokens[j].ChainId)
+				}
+				sig <- Msg{tokens[i].ChainId, nil}
+			}(i)
+		}
+		cnt := len(tokens)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("%s at chain %d has been rebind.",tokenConfig.Name ,msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+		/*
 	case "shutToken":
 		log.Info("Processing...")
 		args := flag.Args()
@@ -257,6 +391,7 @@ func main() {
 				break
 			}
 		}
+		*/
 	default:
 		log.Fatal("unknown function", function)
 	}

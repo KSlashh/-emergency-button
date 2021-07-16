@@ -73,3 +73,43 @@ func TestReadConfig(t *testing.T) {
 	}
 	fmt.Printf("chain %d has name %s", net1.PolyChainID, net1.Name)
 }
+
+func TestGenerateTokenConfig(t *testing.T) {
+	Eth := Token{
+		2,
+		common.HexToAddress("0x250e76987d838a75310c34bf422ea9f1AC4Cc906"),
+	}
+	Bsc := Token{
+		6,
+		common.HexToAddress("0x2f7ac9436ba4B548f9582af91CA1Ef02cd2F1f03"),
+	}
+	Heco := Token{
+		7,
+		common.HexToAddress("0x020c15e7d08A8Ec7D35bCf3AC3CCbF0BBf2704e6"),
+	}
+	Ok := Token{
+		12,
+		common.HexToAddress("0x9a3658864Aa2Ccc63FA61eAAD5e4f65fA490cA7D"),
+	}
+	tokens := []Token{Eth, Bsc, Heco, Ok}
+	res, err := json.Marshal(&TokenConfig{"sampleToken",tokens})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("%s \n", res)
+	err = ioutil.WriteFile("./sampleToken.json", res, 0666)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
+func TestReadTokenConfig(t *testing.T) {
+	conf, err := LoadToken("sampleToken.json")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("token %s at chain %d is %s", conf.Name, conf.Tokens[2].PolyChainId, conf.Tokens[2].Address.Hex())
+}
