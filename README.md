@@ -112,12 +112,12 @@ token.json , 例如：
 ````
 执行：
 ````
-./boom -func shutToken -conf sampleTestnetConfig.json -token USDT.json 
+./boom -func shutToken -conf sampleTestnetConfig.json -token USDT.json 2 79 7
 ````
 
 ## rebind Token
 ````
-./boom -func rebindToken -conf sampleTestnetConfig.json -token USDT.json
+./boom -func rebindToken -conf sampleTestnetConfig.json -token USDT.json 2 79 7
 ````
 
 ## multiple gas price

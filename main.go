@@ -21,7 +21,7 @@ type Msg struct {
 	Err     error
 }
 
-type token struct {
+type Token struct {
 	ChainId uint64
 	Address common.Address
 	NetCfg  *config.Network
@@ -122,20 +122,28 @@ func main() {
 		}
 	case "shutToken":
 		log.Info("Processing...")
+		args := flag.Args()
 		tokenConfig, err := config.LoadToken(tokenFile)
 		if err != nil {
 			log.Fatal("LoadToken fail", err)
 		}
 		sig := make(chan Msg, 10)
-		var tokens []*token
-		for i := 0; i < len(tokenConfig.Tokens); i++ {
-			id := tokenConfig.Tokens[i].PolyChainId
-			address := tokenConfig.Tokens[i].Address
-			netCfg := conf.GetNetwork(id)
-			if netCfg == nil {
-				log.Fatalf("network with chainId %d not found in config file", id)
+		var tokens []*Token
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
 			}
-			tokens = append(tokens, &token{uint64(id), address, netCfg})
+			token := tokenConfig.GetToken(uint64(id))
+			if token == nil {
+				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			}
+			address := token.Address
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+			}
+			tokens = append(tokens, &Token{uint64(id), address, netCfg})
 		}
 		for i := 0; i < len(tokens); i++ {
 			go func(i int) {
@@ -187,20 +195,28 @@ func main() {
 		}
 	case "rebindToken":
 		log.Info("Processing...")
+		args := flag.Args()
 		tokenConfig, err := config.LoadToken(tokenFile)
 		if err != nil {
 			log.Fatal("LoadToken fail", err)
 		}
 		sig := make(chan Msg, 10)
-		var tokens []*token
-		for i := 0; i < len(tokenConfig.Tokens); i++ {
-			id := tokenConfig.Tokens[i].PolyChainId
-			address := tokenConfig.Tokens[i].Address
-			netCfg := conf.GetNetwork(id)
-			if netCfg == nil {
-				log.Fatalf("network with chainId %d not found in config file", id)
+		var tokens []*Token
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
 			}
-			tokens = append(tokens, &token{uint64(id), address, netCfg})
+			token := tokenConfig.GetToken(uint64(id))
+			if token == nil {
+				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			}
+			address := token.Address
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+			}
+			tokens = append(tokens, &Token{uint64(id), address, netCfg})
 		}
 		for i := 0; i < len(tokens); i++ {
 			go func(i int) {

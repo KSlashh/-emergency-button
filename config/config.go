@@ -31,7 +31,6 @@ type TokenConfig struct {
 	Tokens  []Token
 }
 
-// LoadConfig ...
 func LoadConfig(confFile string) (config *Config, err error) {
 	jsonBytes, err := ioutil.ReadFile(confFile)
 	if err != nil {
@@ -43,7 +42,6 @@ func LoadConfig(confFile string) (config *Config, err error) {
 	return
 }
 
-// search by chainId or name
 func (c *Config) GetNetwork(index uint64) (netConfig *Network) {
 	for i := 0; i < len(c.Networks); i++ {
 		if c.Networks[i].PolyChainID == index {
@@ -62,4 +60,13 @@ func LoadToken(tokenFile string) (tokens *TokenConfig, err error) {
 	tokens = &TokenConfig{}
 	err = json.Unmarshal(jsonBytes, tokens)
 	return
+}
+
+func (c *TokenConfig) GetToken(index uint64) (netConfig *Token) {
+	for i := 0; i < len(c.Tokens); i++ {
+		if c.Tokens[i].PolyChainId == index {
+			return &c.Tokens[i]
+		}
+	}
+	return nil
 }
