@@ -2,7 +2,10 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
+    "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"io/ioutil"
 )
 
@@ -12,7 +15,9 @@ type Network struct {
 	Name                     string
 	Provider                 string
 	CCMPOwnerPrivateKey      string
+	CCMPOwnerKeyStore        string
 	LockProxyOwnerPrivateKey string
+	LockProxyOwnerKeyStore   string
 	CCMPAddress              common.Address
 	LockProxyAddress         common.Address
 }
@@ -48,6 +53,32 @@ func (c *Config) GetNetwork(index uint64) (netConfig *Network) {
 			return &c.Networks[i]
 		}
 	}
+	return nil
+}
+
+func (n *Network) CCMPOwnerFromKeyStore(pswd string) (err error) {
+	ks1, err := ioutil.ReadFile(n.CCMPOwnerKeyStore)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v",err)
+	}
+	key1, err := keystore.DecryptKey(ks1, pswd)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v",err)
+	}
+	n.CCMPOwnerPrivateKey = fmt.Sprintf("%x",crypto.FromECDSA(key1.PrivateKey))
+    return nil
+}
+
+func (n *Network) LockProxyFromKeyStore(pswd string) (err error) {
+	ks2, err := ioutil.ReadFile(n.LockProxyOwnerKeyStore)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v",err)
+	}
+	key2, err := keystore.DecryptKey(ks2, pswd)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v",err)
+	}
+	n.CCMPOwnerPrivateKey = fmt.Sprintf("%x",crypto.FromECDSA(key2.PrivateKey))
 	return nil
 }
 

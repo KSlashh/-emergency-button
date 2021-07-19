@@ -5,7 +5,9 @@
       "Name":"eth",
       "Provider":"https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
       "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
+      "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
+      "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "CCMPAddress":"0x5a51e2ebf8d136926b9ca7b59b60464e7c44d2eb",
       "LockProxyAddress":"0x250e76987d838a75310c34bf422ea9f1ac4cc906"
     },
@@ -15,7 +17,9 @@
       "Name":"bsc",
       "Provider":"https://bsc-dataseed.binance.org",
       "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
+      "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
+      "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "CCMPAddress":"0xabd7f7b89c5fd5d0aef06165f8173b1b83d7d5c9",
       "LockProxyAddress":"0x2f7ac9436ba4b548f9582af91ca1ef02cd2f1f03"
     },
@@ -25,7 +29,9 @@
       "Name":"heco",
       "Provider":"https://http-mainnet-node.huobichain.com",
       "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
+      "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
+      "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "CCMPAddress":"0xabd7f7b89c5fd5d0aef06165f8173b1b83d7d5c9",
       "LockProxyAddress":"0x020c15e7d08a8ec7d35bcf3ac3ccbf0bbf2704e6"
     },
@@ -35,7 +41,9 @@
       "Name":"ok",
       "Provider":"https://exchainrpc.okex.org/",
       "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
+      "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
+      "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "CCMPAddress":"0x4739fe955be4704bcb7d6a699823f5b29217baf6",
       "LockProxyAddress":"0x9a3658864aa2ccc63fa61eaad5e4f65fa490ca7d"
     }

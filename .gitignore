@@ -2,3 +2,7 @@ config.json
 .DS_Store
 boom
 token.json
+keystore/
+*_test.go
+tmp/       
+.idea/     
