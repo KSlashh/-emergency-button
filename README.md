@@ -138,4 +138,4 @@ token.json , 例如：
 ## 使用keystore
 上述例子为在config文件中直接配置了私钥的情况下运行。
 如果需要使用keystore，在配置相应字段指定keystore文件的路径即可。
-执行时会要求提供相应的password
+执行时会要求提供相应的password.
