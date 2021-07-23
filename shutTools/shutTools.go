@@ -195,7 +195,7 @@ func WaitTxConfirm(client *ethclient.Client, hash common.Hash) error {
 		if now.Before(end) {
 			continue
 		}
-		log.Info("check your transaction %s on explorer, make sure it's confirmed.", hash.Hex())
+		log.Info("Transaction pending for more than 1 min, check transaction %s on explorer yourself, make sure it's confirmed.", hash.Hex())
 		return nil
 	}
 
