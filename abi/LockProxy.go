@@ -27,15 +27,16 @@ var (
 )
 
 // ILockProxyABI is the input ABI used to generate the binding from.
-const ILockProxyABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"}],\"name\":\"bindAssetHash\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ILockProxyABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"assetHashMap\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"}],\"name\":\"bindAssetHash\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ILockProxyFuncSigs maps the 4-byte function signature to its string representation.
 var ILockProxyFuncSigs = map[string]string{
+	"4f7d9808": "assetHashMap(address,uint64)",
 	"3348f63b": "bindAssetHash(address,uint64,bytes)",
 }
 
 // ILockProxyBin is the compiled bytecode used for deploying new contracts.
-var ILockProxyBin = "0x608060405234801561001057600080fd5b50610148806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80633348f63b14610030575b600080fd5b6100f56004803603606081101561004657600080fd5b6001600160a01b038235169167ffffffffffffffff6020820135169181019060608101604082013564010000000081111561008057600080fd5b82018360208201111561009257600080fd5b803590602001918460018302840111640100000000831117156100b457600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610109945050505050565b604080519115158252519081900360200190f35b6000939250505056fea264697066735822122047daf2288412873ab9761d4e35c26ddb0c3ea2503b3ba4b7a1265fb2622d5d9f64736f6c634300060c0033"
+var ILockProxyBin = "0x608060405234801561001057600080fd5b5061029f806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80633348f63b1461003b5780634f7d980814610114575b600080fd5b6101006004803603606081101561005157600080fd5b6001600160a01b038235169167ffffffffffffffff6020820135169181019060608101604082013564010000000081111561008b57600080fd5b82018360208201111561009d57600080fd5b803590602001918460018302840111640100000000831117156100bf57600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295506101bf945050505050565b604080519115158252519081900360200190f35b61014a6004803603604081101561012a57600080fd5b5080356001600160a01b0316906020013567ffffffffffffffff166101c8565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561018457818101518382015260200161016c565b50505050905090810190601f1680156101b15780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b60009392505050565b60006020818152928152604080822084529181528190208054825160026001831615610100026000190190921691909104601f8101859004850282018501909352828152929091908301828280156102615780601f1061023657610100808354040283529160200191610261565b820191906000526020600020905b81548152906001019060200180831161024457829003601f168201915b50505050508156fea2646970667358221220dd4cab2a9dc99a4fbfc17c1c33e3867bf9bd5886dc11157b070317fd5ab4fa5664736f6c634300060c0033"
 
 // DeployILockProxy deploys a new Ethereum contract, binding an instance of ILockProxy to it.
 func DeployILockProxy(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ILockProxy, error) {
@@ -191,6 +192,37 @@ func (_ILockProxy *ILockProxyTransactorRaw) Transfer(opts *bind.TransactOpts) (*
 // Transact invokes the (paid) contract method with params as input values.
 func (_ILockProxy *ILockProxyTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _ILockProxy.Contract.contract.Transact(opts, method, params...)
+}
+
+// AssetHashMap is a free data retrieval call binding the contract method 0x4f7d9808.
+//
+// Solidity: function assetHashMap(address , uint64 ) view returns(bytes)
+func (_ILockProxy *ILockProxyCaller) AssetHashMap(opts *bind.CallOpts, arg0 common.Address, arg1 uint64) ([]byte, error) {
+	var out []interface{}
+	err := _ILockProxy.contract.Call(opts, &out, "assetHashMap", arg0, arg1)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// AssetHashMap is a free data retrieval call binding the contract method 0x4f7d9808.
+//
+// Solidity: function assetHashMap(address , uint64 ) view returns(bytes)
+func (_ILockProxy *ILockProxySession) AssetHashMap(arg0 common.Address, arg1 uint64) ([]byte, error) {
+	return _ILockProxy.Contract.AssetHashMap(&_ILockProxy.CallOpts, arg0, arg1)
+}
+
+// AssetHashMap is a free data retrieval call binding the contract method 0x4f7d9808.
+//
+// Solidity: function assetHashMap(address , uint64 ) view returns(bytes)
+func (_ILockProxy *ILockProxyCallerSession) AssetHashMap(arg0 common.Address, arg1 uint64) ([]byte, error) {
+	return _ILockProxy.Contract.AssetHashMap(&_ILockProxy.CallOpts, arg0, arg1)
 }
 
 // BindAssetHash is a paid mutator transaction binding the contract method 0x3348f63b.

@@ -146,6 +146,28 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	return nil
 }
 
+func CCMPaused(client *ethclient.Client, conf *config.Network) (paused bool, err error) {
+	CCMPContract, err := abi.NewICCMPCaller(conf.CCMPAddress, client)
+	if err != nil {
+		return false, fmt.Errorf(fmt.Sprintf("fail while request CCM of %s ,", conf.Name), err)
+	}
+	return CCMPContract.Paused(nil)
+}
+
+func TokenMap(client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64) (targetToken []byte, err error) {
+	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxyAddress, client)
+	if err != nil {
+		return nil, fmt.Errorf(
+			fmt.Sprintf(
+				"fail while request Token %s from chain %d =>to=> asset at chain %d,",
+				token.Hex(),
+				conf.PolyChainID,
+				toChainId),
+			err)
+	}
+	return LockProxyContract.AssetHashMap(nil, token, toChainId)
+}
+
 func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64, gasMultiple float64, chainId *big.Int) (*bind.TransactOpts, error) {
 	authAddress := crypto.PubkeyToAddress(*key.Public().(*ecdsa.PublicKey))
 	nonce, err := client.PendingNonceAt(context.Background(), authAddress)

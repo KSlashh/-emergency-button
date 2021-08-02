@@ -27,16 +27,17 @@ var (
 )
 
 // ICCMPABI is the input ABI used to generate the binding from.
-const ICCMPABI = "[{\"inputs\":[],\"name\":\"pauseEthCrossChainManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpauseEthCrossChainManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ICCMPABI = "[{\"inputs\":[],\"name\":\"pauseEthCrossChainManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpauseEthCrossChainManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ICCMPFuncSigs maps the 4-byte function signature to its string representation.
 var ICCMPFuncSigs = map[string]string{
 	"3b9a80b8": "pauseEthCrossChainManager()",
+	"5c975abb": "paused()",
 	"4390c707": "unpauseEthCrossChainManager()",
 }
 
 // ICCMPBin is the compiled bytecode used for deploying new contracts.
-var ICCMPBin = "0x6080604052348015600f57600080fd5b50608c8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c80633b9a80b81460375780634390c707146037575b600080fd5b603d6051565b604080519115158252519081900360200190f35b60009056fea2646970667358221220a15b3a487ae2fcdb24c05e227993944b8ed5b5bf447af38a6a289fceb9f3298064736f6c634300060c0033"
+var ICCMPBin = "0x6080604052348015600f57600080fd5b5060968061001e6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80633b9a80b81460415780634390c7071460415780635c975abb146041575b600080fd5b6047605b565b604080519115158252519081900360200190f35b60009056fea26469706673582212208000fca8670feb8de90d40c21a4228fdad546a5c02c989a6673cf61b2abb8d0f64736f6c634300060c0033"
 
 // DeployICCMP deploys a new Ethereum contract, binding an instance of ICCMP to it.
 func DeployICCMP(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ICCMP, error) {
@@ -192,6 +193,37 @@ func (_ICCMP *ICCMPTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Tran
 // Transact invokes the (paid) contract method with params as input values.
 func (_ICCMP *ICCMPTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _ICCMP.Contract.contract.Transact(opts, method, params...)
+}
+
+// Paused is a free data retrieval call binding the contract method 0x5c975abb.
+//
+// Solidity: function paused() view returns(bool)
+func (_ICCMP *ICCMPCaller) Paused(opts *bind.CallOpts) (bool, error) {
+	var out []interface{}
+	err := _ICCMP.contract.Call(opts, &out, "paused")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// Paused is a free data retrieval call binding the contract method 0x5c975abb.
+//
+// Solidity: function paused() view returns(bool)
+func (_ICCMP *ICCMPSession) Paused() (bool, error) {
+	return _ICCMP.Contract.Paused(&_ICCMP.CallOpts)
+}
+
+// Paused is a free data retrieval call binding the contract method 0x5c975abb.
+//
+// Solidity: function paused() view returns(bool)
+func (_ICCMP *ICCMPCallerSession) Paused() (bool, error) {
+	return _ICCMP.Contract.Paused(&_ICCMP.CallOpts)
 }
 
 // PauseEthCrossChainManager is a paid mutator transaction binding the contract method 0x3b9a80b8.
