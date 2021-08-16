@@ -1,17 +1,16 @@
 package config
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Network struct {
@@ -79,12 +78,13 @@ func (n *Network) PhrasePrivateKey() (err error) {
 	ok2 := hasPk2 == nil || hasCache2 == nil
 	if ok1 && ok2 { // no need to do anything
 	} else if ok1 { // need to recover LockProxy owner privatekey
-		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
-		password, err := reader.ReadString('\n')
+		pass, err := terminal.ReadPassword(0)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
+		fmt.Println()
+		password := string(pass)
 		password = strings.Replace(password, "\n", "", -1)
 		passwordCache = password
 		err = n.LockProxyOwnerFromKeyStore(password)
@@ -92,12 +92,13 @@ func (n *Network) PhrasePrivateKey() (err error) {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
 	} else if ok2 { // need to recover CCMPowner privatekey
-		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
-		password, err := reader.ReadString('\n')
+		pass, err := terminal.ReadPassword(0)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
+		fmt.Println()
+		password := string(pass)
 		password = strings.Replace(password, "\n", "", -1)
 		passwordCache = password
 		err = n.CCMPOwnerFromKeyStore(password)
@@ -105,21 +106,23 @@ func (n *Network) PhrasePrivateKey() (err error) {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
 	} else { // both
-		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
-		password, err := reader.ReadString('\n')
+		pass, err := terminal.ReadPassword(0)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
-		password = strings.Replace(password, "\n", "", -1)
+		fmt.Println()
+		password := string(pass)
 		password2 := password
 		passwordCache = password
 		if n.LockProxyOwnerKeyStore != n.CCMPOwnerKeyStore {
 			fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
-			password2, err = reader.ReadString('\n')
+			pass, err = terminal.ReadPassword(0)
 			if err != nil {
 				return fmt.Errorf("fail to phrase private key, %v", err)
 			}
+			fmt.Println()
+			password2 = string(pass)
 			password2 = strings.Replace(password2, "\n", "", -1)
 		}
 		err = n.CCMPOwnerFromKeyStore(password)
