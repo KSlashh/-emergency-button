@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -39,6 +40,8 @@ type TokenConfig struct {
 	Tokens []Token
 }
 
+var passwordCache string = ""
+
 func LoadConfig(confFile string) (config *Config, err error) {
 	jsonBytes, err := ioutil.ReadFile(confFile)
 	if err != nil {
@@ -59,34 +62,50 @@ func (c *Config) GetNetwork(index uint64) (netConfig *Network) {
 	return nil
 }
 
+func (c *Config) GetNetworkIds() []string {
+	var res []string
+	for i := 0; i < len(c.Networks); i++ {
+		res = append(res, strconv.Itoa(int(c.Networks[i].PolyChainID)))
+	}
+	return res
+}
+
 func (n *Network) PhrasePrivateKey() (err error) {
-	_, ok1 := crypto.HexToECDSA(n.CCMPOwnerPrivateKey)
-	_, ok2 := crypto.HexToECDSA(n.LockProxyOwnerPrivateKey)
-	reader := bufio.NewReader(os.Stdin)
-	if ok1 == nil && ok2 == nil { // no need to do anything
-	} else if ok1 == nil { // need to recover LockProxy owner privatekey
+	_, hasPk1 := crypto.HexToECDSA(n.CCMPOwnerPrivateKey)
+	_, hasPk2 := crypto.HexToECDSA(n.LockProxyOwnerPrivateKey)
+	hasCache1 := n.CCMPOwnerFromKeyStore(passwordCache)
+	hasCache2 := n.LockProxyOwnerFromKeyStore(passwordCache)
+	ok1 := hasPk1 == nil || hasCache1 == nil
+	ok2 := hasPk2 == nil || hasCache2 == nil
+	if ok1 && ok2 { // no need to do anything
+	} else if ok1 { // need to recover LockProxy owner privatekey
+		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
 		password, err := reader.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
 		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
 		err = n.LockProxyOwnerFromKeyStore(password)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
-	} else if ok2 == nil { // need to recover CCMPowner privatekey
+	} else if ok2 { // need to recover CCMPowner privatekey
+		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
 		password, err := reader.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
 		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
 		err = n.CCMPOwnerFromKeyStore(password)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
 	} else { // both
+		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
 		password, err := reader.ReadString('\n')
 		if err != nil {
@@ -94,6 +113,7 @@ func (n *Network) PhrasePrivateKey() (err error) {
 		}
 		password = strings.Replace(password, "\n", "", -1)
 		password2 := password
+		passwordCache = password
 		if n.LockProxyOwnerKeyStore != n.CCMPOwnerKeyStore {
 			fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
 			password2, err = reader.ReadString('\n')
@@ -158,4 +178,12 @@ func (c *TokenConfig) GetToken(index uint64) (netConfig *Token) {
 		}
 	}
 	return nil
+}
+
+func (c *TokenConfig) GetTokenIds() []string {
+	var res []string
+	for i := 0; i < len(c.Tokens); i++ {
+		res = append(res, strconv.Itoa(int(c.Tokens[i].PolyChainId)))
+	}
+	return res
 }
