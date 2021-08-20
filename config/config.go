@@ -69,6 +69,50 @@ func (c *Config) GetNetworkIds() []string {
 	return res
 }
 
+func (n *Network) PhraseCCMPrivateKey() (err error) {
+	_, hasPk1 := crypto.HexToECDSA(n.CCMPOwnerPrivateKey)
+	hasCache1 := n.CCMPOwnerFromKeyStore(passwordCache)
+	ok1 := hasPk1 == nil || hasCache1 == nil
+	if !ok1 {
+		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
+		pass, err := terminal.ReadPassword(0)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+		fmt.Println()
+		password := string(pass)
+		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
+		err = n.CCMPOwnerFromKeyStore(password)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+	}
+	return nil
+}
+
+func (n *Network) PhraseLockProxyPrivateKey() (err error) {
+	_, hasPk2 := crypto.HexToECDSA(n.LockProxyOwnerPrivateKey)
+	hasCache2 := n.LockProxyOwnerFromKeyStore(passwordCache)
+	ok2 := hasPk2 == nil || hasCache2 == nil
+	if !ok2 { // need to recover LockProxy owner privatekey
+		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
+		pass, err := terminal.ReadPassword(0)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+		fmt.Println()
+		password := string(pass)
+		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
+		err = n.LockProxyOwnerFromKeyStore(password)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+	}
+	return nil
+}
+
 func (n *Network) PhrasePrivateKey() (err error) {
 	_, hasPk1 := crypto.HexToECDSA(n.CCMPOwnerPrivateKey)
 	_, hasPk2 := crypto.HexToECDSA(n.LockProxyOwnerPrivateKey)

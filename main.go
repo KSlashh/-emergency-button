@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/KSlashh/emergency-button/config"
 	"github.com/KSlashh/emergency-button/log"
@@ -43,6 +44,9 @@ func init() {
 		"  -func rebindToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
 		"  -func bindSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
 		"  -func shutSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
+		"  -func checkUnbind \n"+
+		"  -func checkBind \n"+
+		"  -func checkCCM \n"+
 		"  {}contains default value")
 	flag.Parse()
 }
@@ -72,7 +76,7 @@ func main() {
 				log.Errorf("network with chainId %d not found in config file", id)
 				continue
 			}
-			err = netCfg.PhrasePrivateKey()
+			err = netCfg.PhraseCCMPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -132,7 +136,7 @@ func main() {
 				log.Errorf("network with chainId %d not found in config file", id)
 				continue
 			}
-			err = netCfg.PhrasePrivateKey()
+			err = netCfg.PhraseCCMPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -189,17 +193,19 @@ func main() {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
 				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
 			}
 			token := tokenConfig.GetToken(uint64(id))
 			if token == nil {
 				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+				continue
 			}
 			address := token.Address
 			netCfg := conf.GetNetwork(uint64(id))
 			if netCfg == nil {
 				log.Fatalf("network with chainId %d not found in %s", id, confFile)
 			}
-			err = netCfg.PhrasePrivateKey()
+			err = netCfg.PhraseLockProxyPrivateKey()
 			if err != nil {
 				log.Fatalf("%v", err)
 			}
@@ -294,17 +300,19 @@ func main() {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
 				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
 			}
 			token := tokenConfig.GetToken(uint64(id))
 			if token == nil {
 				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+				continue
 			}
 			address := token.Address
 			netCfg := conf.GetNetwork(uint64(id))
 			if netCfg == nil {
 				log.Fatalf("network with chainId %d not found in %s", id, confFile)
 			}
-			err = netCfg.PhrasePrivateKey()
+			err = netCfg.PhraseLockProxyPrivateKey()
 			if err != nil {
 				log.Fatalf("%v", err)
 			}
@@ -409,7 +417,7 @@ func main() {
 		if netCfg == nil {
 			log.Fatalf("network with chainId %d not found in %s", id, confFile)
 		}
-		err = netCfg.PhrasePrivateKey()
+		err = netCfg.PhraseLockProxyPrivateKey()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -427,10 +435,6 @@ func main() {
 		netCfg = conf.GetNetwork(uint64(id))
 		if netCfg == nil {
 			log.Fatalf("network with chainId %d not found in %s", id, confFile)
-		}
-		err = netCfg.PhrasePrivateKey()
-		if err != nil {
-			log.Fatalf("%v", err)
 		}
 		toAsset := &Token{uint64(id), address, netCfg}
 
@@ -506,7 +510,7 @@ func main() {
 		if netCfg == nil {
 			log.Fatalf("network with chainId %d not found in %s", id, confFile)
 		}
-		err = netCfg.PhrasePrivateKey()
+		err = netCfg.PhraseLockProxyPrivateKey()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -564,6 +568,209 @@ func main() {
 		}
 		log.Infof("%s: %d =>to=> %d pair has been shut", tokenConfig.Name, fromAsset.ChainId, toChainId)
 		log.Info("Done.")
+	case "checkUnbind":
+		log.Info("Processing...")
+		args := flag.Args()
+		tokenConfig, err := config.LoadToken(tokenFile)
+		if err != nil {
+			log.Fatal("LoadToken fail", err)
+		}
+		if all {
+			args = tokenConfig.GetTokenIds()
+		}
+		sig := make(chan Msg, 10)
+		var tokens []*Token
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			token := tokenConfig.GetToken(uint64(id))
+			if token == nil {
+				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+				continue
+			}
+			address := token.Address
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+			}
+			tokens = append(tokens, &Token{uint64(id), address, netCfg})
+		}
+		for i := 0; i < len(tokens); i++ {
+			go func(i int) {
+				log.Infof("Checking %s at %s...", tokenConfig.Name, tokens[i].NetCfg.Name)
+				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
+					sig <- Msg{tokens[i].ChainId, err}
+					return
+				}
+				for j := 0; j < len(tokens); j++ {
+					if i == j {
+						continue
+					}
+					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
+					if err != nil {
+						log.Fatalf(
+							"fail to check %s from chain %d =>to=> chain %d , %s",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							err)
+					}
+					if len(toAsset) == 0 {
+						log.Infof(
+							"token %s from chain %d =>to=> chain %d is unbind",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId)
+						continue
+					} else {
+						log.Warnf(
+							"token %s from chain %d =>to=> chain %d is still bind",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId)
+					}
+				}
+				sig <- Msg{tokens[i].ChainId, nil}
+			}(i)
+		}
+		cnt := len(tokens)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("%s at chain %d has been checked.", tokenConfig.Name, msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "checkBind":
+		log.Info("Processing...")
+		args := flag.Args()
+		tokenConfig, err := config.LoadToken(tokenFile)
+		if err != nil {
+			log.Fatal("LoadToken fail", err)
+		}
+		if all {
+			args = tokenConfig.GetTokenIds()
+		}
+		sig := make(chan Msg, 10)
+		var tokens []*Token
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			token := tokenConfig.GetToken(uint64(id))
+			if token == nil {
+				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+				continue
+			}
+			address := token.Address
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+			}
+			tokens = append(tokens, &Token{uint64(id), address, netCfg})
+		}
+		for i := 0; i < len(tokens); i++ {
+			go func(i int) {
+				log.Infof("Checking %s at %s...", tokenConfig.Name, tokens[i].NetCfg.Name)
+				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
+					sig <- Msg{tokens[i].ChainId, err}
+					return
+				}
+				for j := 0; j < len(tokens); j++ {
+					if i == j {
+						continue
+					}
+					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
+					if err != nil {
+						log.Fatalf(
+							"fail to check %s from chain %d =>to=> chain %d , %s",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							err)
+					}
+					if len(toAsset) == 0 {
+						log.Warnf(
+							"token %s from chain %d =>to=> chain %d has not been bind",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId)
+						continue
+					} else {
+						log.Infof(
+							"token %s from chain %d =>to=> chain %d is binded",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId)
+					}
+				}
+				sig <- Msg{tokens[i].ChainId, nil}
+			}(i)
+		}
+		cnt := len(tokens)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("%s at chain %d has been checked.", tokenConfig.Name, msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "checkCCM":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			go func() {
+				log.Infof("Checking %s ...", netCfg.Name)
+				time.Sleep(500 * time.Millisecond)
+				paused, err := shutTools.CCMPaused(client, netCfg)
+				if err != nil {
+					return
+				}
+				if paused && !force {
+					log.Warnf("CCM at chain %d has been shut down", netCfg.PolyChainID)
+					return
+				} else if paused && force {
+					log.Infof("CCM at chain %d is running", netCfg.PolyChainID)
+				}
+			}()
+		}
 	default:
 		log.Fatal("unknown function", function)
 	}

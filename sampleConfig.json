@@ -46,6 +46,42 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "CCMPAddress":"0x4739fe955be4704bcb7d6a699823f5b29217baf6",
       "LockProxyAddress":"0x9a3658864aa2ccc63fa61eaad5e4f65fa490ca7d"
+    },
+
+    {
+      "PolyChainID":17,
+      "Name":"polygon",
+      "Provider":"https://rpc-mainnet.matic.network",
+      "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
+      "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
+      "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
+      "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "CCMPAddress":"0x5366ea2b5b729ff3cef404c2408c8c60cc061b71",
+      "LockProxyAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212"
+    },
+
+    {
+      "PolyChainID":3,
+      "Name":"ont",
+      "Provider":"not-eth-client",
+      "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
+      "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
+      "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
+      "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "CCMPAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212",
+      "LockProxyAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212"
+    },
+
+    {
+      "PolyChainID":4,
+      "Name":"neo",
+      "Provider":"not-eth-client",
+      "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
+      "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
+      "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
+      "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "CCMPAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212",
+      "LockProxyAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212"
     }
   ]
 }
