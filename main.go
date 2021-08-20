@@ -764,7 +764,7 @@ func main() {
 				}
 				if paused {
 					log.Warnf("CCM at chain %d has been shut down", netCfg.PolyChainID)
-				} else if paused {
+				} else {
 					log.Infof("CCM at chain %d is running", netCfg.PolyChainID)
 				}
 				sig <- Msg{netCfg.PolyChainID, err}
