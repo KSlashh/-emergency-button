@@ -19,7 +19,9 @@ import (
 
 var DefaultGasLimit uint64 = 300000
 var gasMultipleDecimal int64 = 8
+var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
+// CCM
 func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
 	privateKey, err := crypto.HexToECDSA(conf.CCMPOwnerPrivateKey)
 	if err != nil {
@@ -76,6 +78,15 @@ func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	return nil
 }
 
+func CCMPaused(client *ethclient.Client, conf *config.Network) (paused bool, err error) {
+	CCMPContract, err := abi.NewICCMPCaller(conf.CCMPAddress, client)
+	if err != nil {
+		return false, fmt.Errorf(fmt.Sprintf("fail while request CCM of %s ,", conf.Name), err)
+	}
+	return CCMPContract.Paused(nil)
+}
+
+// LockProxy
 func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64, toAsset []byte) error {
 	privateKey, err := crypto.HexToECDSA(conf.LockProxyOwnerPrivateKey)
 	if err != nil {
@@ -146,14 +157,6 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	return nil
 }
 
-func CCMPaused(client *ethclient.Client, conf *config.Network) (paused bool, err error) {
-	CCMPContract, err := abi.NewICCMPCaller(conf.CCMPAddress, client)
-	if err != nil {
-		return false, fmt.Errorf(fmt.Sprintf("fail while request CCM of %s ,", conf.Name), err)
-	}
-	return CCMPContract.Paused(nil)
-}
-
 func TokenMap(client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64) (targetToken []byte, err error) {
 	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxyAddress, client)
 	if err != nil {
@@ -168,6 +171,326 @@ func TokenMap(client *ethclient.Client, conf *config.Network, token common.Addre
 	return LockProxyContract.AssetHashMap(nil, token, toChainId)
 }
 
+// Swapper
+func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, poolId uint64, poolTokenAddress common.Address) error {
+	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	tx, err := SwapperContract.RegisterPool(auth, poolId, poolTokenAddress)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	return nil
+}
+
+func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, fromAssetHash []byte, poolId uint64) error {
+	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Asset %x at pool %d at chain %d, ",
+				fromAssetHash,
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Asset %x at pool %d at chain %d, ",
+				fromAssetHash,
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Asset %x at pool %d at chain %d, ",
+				fromAssetHash,
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Asset %x at pool %d at chain %d, ",
+				fromAssetHash,
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	tx, err := SwapperContract.BindAssetAndPool(auth, fromAssetHash, poolId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Asset %x at pool %d at chain %d, ",
+				fromAssetHash,
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Asset %x at pool %d at chain %d, ",
+				fromAssetHash,
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	return nil
+}
+
+func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Network, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
+	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	tx, err := SwapperContract.Bind3Asset(auth, asset1, asset2, asset3, poolId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	return nil
+}
+
+func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf *config.Network, poolTokenAddress common.Address, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
+	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	tx, err := SwapperContract.RegisterPoolWith3Assets(auth, poolId, poolTokenAddress, asset1, asset2, asset3)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				poolId,
+				conf.PolyChainID),
+			err)
+	}
+	return nil
+}
+
+func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
+	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+	}
+	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+	}
+	tx, err := SwapperContract.Pause(auth)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+	}
+	return nil
+}
+
+func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
+	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+	}
+	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+	}
+	tx, err := SwapperContract.Unpause(auth)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+	}
+	return nil
+}
+
+func SwapperPaused(client *ethclient.Client, conf *config.Network) (paused bool, err error) {
+	SwapperContract, err := abi.NewISwapperCaller(conf.SwapperAddress, client)
+	if err != nil {
+		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
+	}
+	return SwapperContract.Paused(nil)
+}
+
+func PoolTokenMap(client *ethclient.Client, conf *config.Network, poolId uint64) (poolTokenAddress common.Address, err error) {
+	SwapperContract, err := abi.NewISwapperCaller(conf.SwapperAddress, client)
+	if err != nil {
+		return ADDRESS_ZERO, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
+	}
+	return SwapperContract.PoolTokenMap(nil, poolId)
+}
+
+func AssetInPool(client *ethclient.Client, conf *config.Network, poolId uint64, assetHash []byte) (isIn bool, err error) {
+	SwapperContract, err := abi.NewISwapperCaller(conf.SwapperAddress, client)
+	if err != nil {
+		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
+	}
+	return SwapperContract.AssetInPool(nil, assetHash, poolId)
+}
+
+// Basic
 func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64, gasMultiple float64, chainId *big.Int) (*bind.TransactOpts, error) {
 	authAddress := crypto.PubkeyToAddress(*key.Public().(*ecdsa.PublicKey))
 	nonce, err := client.PendingNonceAt(context.Background(), authAddress)

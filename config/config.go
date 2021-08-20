@@ -21,8 +21,11 @@ type Network struct {
 	CCMPOwnerKeyStore        string
 	LockProxyOwnerPrivateKey string
 	LockProxyOwnerKeyStore   string
+	SwapperOwnerPrivateKey   string
+	SwapperOwnerKeyStore     string
 	CCMPAddress              common.Address
 	LockProxyAddress         common.Address
+	SwapperAddress           common.Address
 }
 
 type Config struct {
@@ -113,16 +116,12 @@ func (n *Network) PhraseLockProxyPrivateKey() (err error) {
 	return nil
 }
 
-func (n *Network) PhrasePrivateKey() (err error) {
-	_, hasPk1 := crypto.HexToECDSA(n.CCMPOwnerPrivateKey)
-	_, hasPk2 := crypto.HexToECDSA(n.LockProxyOwnerPrivateKey)
-	hasCache1 := n.CCMPOwnerFromKeyStore(passwordCache)
-	hasCache2 := n.LockProxyOwnerFromKeyStore(passwordCache)
-	ok1 := hasPk1 == nil || hasCache1 == nil
-	ok2 := hasPk2 == nil || hasCache2 == nil
-	if ok1 && ok2 { // no need to do anything
-	} else if ok1 { // need to recover LockProxy owner privatekey
-		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
+func (n *Network) PhraseSwapperPrivateKey() (err error) {
+	_, hasPk3 := crypto.HexToECDSA(n.SwapperOwnerPrivateKey)
+	hasCache3 := n.SwapperOwnerFromKeyStore(passwordCache)
+	ok := hasPk3 == nil || hasCache3 == nil
+	if !ok { // need to recover LockProxy owner privatekey
+		fmt.Printf("Please type in password of %s: ", n.SwapperOwnerKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
@@ -131,49 +130,7 @@ func (n *Network) PhrasePrivateKey() (err error) {
 		password := string(pass)
 		password = strings.Replace(password, "\n", "", -1)
 		passwordCache = password
-		err = n.LockProxyOwnerFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-	} else if ok2 { // need to recover CCMPowner privatekey
-		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
-		pass, err := terminal.ReadPassword(0)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		fmt.Println()
-		password := string(pass)
-		password = strings.Replace(password, "\n", "", -1)
-		passwordCache = password
-		err = n.CCMPOwnerFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-	} else { // both
-		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
-		pass, err := terminal.ReadPassword(0)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		fmt.Println()
-		password := string(pass)
-		password2 := password
-		passwordCache = password
-		if n.LockProxyOwnerKeyStore != n.CCMPOwnerKeyStore {
-			fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
-			pass, err = terminal.ReadPassword(0)
-			if err != nil {
-				return fmt.Errorf("fail to phrase private key, %v", err)
-			}
-			fmt.Println()
-			password2 = string(pass)
-			password2 = strings.Replace(password2, "\n", "", -1)
-		}
-		err = n.CCMPOwnerFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		err = n.LockProxyOwnerFromKeyStore(password2)
+		err = n.SwapperOwnerFromKeyStore(password)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
@@ -204,6 +161,19 @@ func (n *Network) LockProxyOwnerFromKeyStore(pswd string) (err error) {
 		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
 	}
 	n.LockProxyOwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key2.PrivateKey))
+	return nil
+}
+
+func (n *Network) SwapperOwnerFromKeyStore(pswd string) (err error) {
+	ks3, err := ioutil.ReadFile(n.SwapperOwnerKeyStore)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	key3, err := keystore.DecryptKey(ks3, pswd)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	n.SwapperOwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key3.PrivateKey))
 	return nil
 }
 

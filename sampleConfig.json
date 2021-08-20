@@ -8,8 +8,11 @@
       "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
+      "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
       "CCMPAddress":"0x5a51e2ebf8d136926b9ca7b59b60464e7c44d2eb",
-      "LockProxyAddress":"0x250e76987d838a75310c34bf422ea9f1ac4cc906"
+      "LockProxyAddress":"0x250e76987d838a75310c34bf422ea9f1ac4cc906",
+      "SwapperAddress":"0xaf83ce8d461e8834de03a3803c968615013c6b3d"
     },
 
     {
@@ -20,8 +23,11 @@
       "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
+      "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
       "CCMPAddress":"0xabd7f7b89c5fd5d0aef06165f8173b1b83d7d5c9",
-      "LockProxyAddress":"0x2f7ac9436ba4b548f9582af91ca1ef02cd2f1f03"
+      "LockProxyAddress":"0x2f7ac9436ba4b548f9582af91ca1ef02cd2f1f03",
+      "SwapperAddress":"0x00b93851e3135663AAeC351555EddEE5B01325e6"
     },
 
     {
@@ -32,8 +38,11 @@
       "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
+      "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
       "CCMPAddress":"0xabd7f7b89c5fd5d0aef06165f8173b1b83d7d5c9",
-      "LockProxyAddress":"0x020c15e7d08a8ec7d35bcf3ac3ccbf0bbf2704e6"
+      "LockProxyAddress":"0x020c15e7d08a8ec7d35bcf3ac3ccbf0bbf2704e6",
+      "SwapperAddress":"0xD98Ee7Ca1B33e60C75E3cd9493c566fc857592c8"
     },
 
     {
@@ -44,8 +53,11 @@
       "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
+      "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
       "CCMPAddress":"0x4739fe955be4704bcb7d6a699823f5b29217baf6",
-      "LockProxyAddress":"0x9a3658864aa2ccc63fa61eaad5e4f65fa490ca7d"
+      "LockProxyAddress":"0x9a3658864aa2ccc63fa61eaad5e4f65fa490ca7d",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000"
     },
 
     {
@@ -56,8 +68,11 @@
       "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
+      "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
       "CCMPAddress":"0x5366ea2b5b729ff3cef404c2408c8c60cc061b71",
-      "LockProxyAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212"
+      "LockProxyAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212",
+      "SwapperAddress":"0xaC57280B3A657A2e8D1180493C519a476D208F61"
     },
 
     {
@@ -68,8 +83,11 @@
       "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
-      "CCMPAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212",
-      "LockProxyAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212"
+      "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
+      "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000"
     },
 
     {
@@ -80,8 +98,11 @@
       "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
-      "CCMPAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212",
-      "LockProxyAddress":"0x28ff66a1b95d7cacf8eded2e658f768f44841212"
+      "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
+      "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000"
     }
   ]
 }

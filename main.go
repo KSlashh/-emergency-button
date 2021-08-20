@@ -13,12 +13,16 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
+
 var confFile string
 var tokenFile string
 var function string
 var multiple float64
 var force bool
 var all bool
+var poolId uint64
+var chainId uint64
 
 type Msg struct {
 	ChainId uint64
@@ -32,6 +36,8 @@ type Token struct {
 }
 
 func init() {
+	flag.Uint64Var(&poolId, "pool", 0, "pool id if needed")
+	flag.Uint64Var(&chainId, "chain", 0, "chain id if single chainId needed")
 	flag.StringVar(&tokenFile, "token", "./token.json", "token configuration file path")
 	flag.StringVar(&confFile, "conf", "./config.json", "configuration file path")
 	flag.Float64Var(&multiple, "mul", 1, "multiple of gasPrice, actual_gasPrice = suggested_gasPrice * mul ")
@@ -44,9 +50,14 @@ func init() {
 		"  -func rebindToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
 		"  -func bindSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
 		"  -func shutSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
+		"  -func pauseSwapper \n"+
+		"  -func unpauseSwapper \n"+
+		"  -func unbindPool \n"+
 		"  -func checkUnbind \n"+
 		"  -func checkBind \n"+
 		"  -func checkCCM \n"+
+		"  -func checkSwapperPaused \n"+
+		"  -func poolTokenMap \n"+
 		"  {}contains default value")
 	flag.Parse()
 }
@@ -575,7 +586,7 @@ func main() {
 		if err != nil {
 			log.Fatal("LoadToken fail", err)
 		}
-		if all {
+		if all || len(args) == 0 {
 			args = tokenConfig.GetTokenIds()
 		}
 		sig := make(chan Msg, 10)
@@ -656,7 +667,7 @@ func main() {
 		if err != nil {
 			log.Fatal("LoadToken fail", err)
 		}
-		if all {
+		if all || len(args) == 0 {
 			args = tokenConfig.GetTokenIds()
 		}
 		sig := make(chan Msg, 10)
@@ -733,7 +744,7 @@ func main() {
 	case "checkCCM":
 		log.Info("Processing...")
 		args := flag.Args()
-		if all {
+		if all || len(args) == 0 {
 			args = conf.GetNetworkIds()
 		}
 		sig := make(chan Msg, 10)
@@ -764,7 +775,7 @@ func main() {
 				}
 				if paused {
 					log.Warnf("CCM at chain %d has been shut down", netCfg.PolyChainID)
-				} else if paused {
+				} else {
 					log.Infof("CCM at chain %d is running", netCfg.PolyChainID)
 				}
 				sig <- Msg{netCfg.PolyChainID, err}
@@ -781,7 +792,228 @@ func main() {
 				break
 			}
 		}
+	case "pauseSwapper":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		cnt := 0
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			err = netCfg.PhraseSwapperPrivateKey()
+			if err != nil {
+				log.Errorf("%v", err)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			go func() {
+				log.Infof("Pausing swapper at %s ...", netCfg.Name)
+				paused, err := shutTools.SwapperPaused(client, netCfg)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				if paused && !force {
+					log.Warnf("Swapper at chain %d is already paused, ignored", netCfg.PolyChainID)
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				} else if paused && force {
+					log.Warnf("Swapper at chain %d is already paused, still force pause", netCfg.PolyChainID)
+				}
+				err = shutTools.PauseSwapper(multiple, client, netCfg)
+				sig <- Msg{netCfg.PolyChainID, err}
+			}()
+			cnt += 1
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("Swapper at chain %d has been paused.", msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "unpauseSwapper":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		cnt := 0
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			err = netCfg.PhraseSwapperPrivateKey()
+			if err != nil {
+				log.Errorf("%v", err)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			go func() {
+				log.Infof("Unpausing swapper at %s ...", netCfg.Name)
+				paused, err := shutTools.SwapperPaused(client, netCfg)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				if !paused && !force {
+					log.Warnf("Swapper at chain %d is not paused, ignored", netCfg.PolyChainID)
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				} else if !paused && force {
+					log.Warnf("Swapper at chain %d is not paused, still force unpause", netCfg.PolyChainID)
+				}
+				err = shutTools.UnpauseSwapper(multiple, client, netCfg)
+				sig <- Msg{netCfg.PolyChainID, err}
+			}()
+			cnt += 1
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("Swapper at chain %d has been unpaused.", msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "unbindPool":
+		log.Info("Processing...")
+		netCfg := conf.GetNetwork(chainId)
+		if netCfg == nil {
+			log.Fatalf("network with chainId %d not found in config file", chainId)
+		}
+		err = netCfg.PhraseSwapperPrivateKey()
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		client, err := ethclient.Dial(netCfg.Provider)
+		if err != nil {
+			log.Fatalf("fail to dial client %s of network %d", netCfg.Provider, chainId)
+		}
+		log.Infof("Unbindind pool %d at %s ...", poolId, netCfg.Name)
+		currentBind, err := shutTools.PoolTokenMap(client, netCfg, poolId)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		if (currentBind == ADDRESS_ZERO) && !force {
+			log.Warnf("Pool %d at chain %d is not registered, ignored", poolId, netCfg.PolyChainID)
+			return
+		} else if (currentBind == ADDRESS_ZERO) && force {
+			log.Warnf("pool %d at chain %d is not registered, still force unbind", poolId, netCfg.PolyChainID)
+		}
+		err = shutTools.RegisterPool(multiple, client, netCfg, poolId, ADDRESS_ZERO)
+		log.Info("Done")
+	case "checkSwapperPaused":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all || len(args) == 0 {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		cnt := 0
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			go func() {
+				log.Infof("Checking %s ...", netCfg.Name)
+				time.Sleep(500 * time.Millisecond)
+				paused, err := shutTools.SwapperPaused(client, netCfg)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				if paused {
+					log.Warnf("Swapper at chain %d has been paused", netCfg.PolyChainID)
+				} else {
+					log.Infof("Swapper at chain %d is running", netCfg.PolyChainID)
+				}
+				sig <- Msg{netCfg.PolyChainID, err}
+			}()
+			cnt += 1
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "poolTokenMap":
+		log.Info("Processing...")
+		netCfg := conf.GetNetwork(chainId)
+		if netCfg == nil {
+			log.Fatalf("network with chainId %d not found in config file", chainId)
+		}
+		client, err := ethclient.Dial(netCfg.Provider)
+		if err != nil {
+			log.Fatalf("fail to dial client %s of network %d", netCfg.Provider, chainId)
+		}
+		log.Infof("Checking pool %d at %s ...", poolId, netCfg.Name)
+		currentBind, err := shutTools.PoolTokenMap(client, netCfg, poolId)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		if currentBind == ADDRESS_ZERO {
+			log.Warnf("Pool %d at chain %d is not registered ", poolId, netCfg.PolyChainID)
+			return
+		} else {
+			log.Infof("pool %d at chain %d is registered, currnet poolTokenAddress %x", poolId, netCfg.PolyChainID, currentBind)
+		}
+		log.Info("Done")
 	default:
 		log.Fatal("unknown function", function)
 	}
+
 }
