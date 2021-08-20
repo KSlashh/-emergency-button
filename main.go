@@ -643,8 +643,6 @@ func main() {
 			cnt -= 1
 			if msg.Err != nil {
 				log.Error(msg.Err)
-			} else {
-				log.Infof("%s at chain %d has been checked.", tokenConfig.Name, msg.ChainId)
 			}
 			if cnt == 0 {
 				log.Info("Done.")
@@ -726,8 +724,6 @@ func main() {
 			cnt -= 1
 			if msg.Err != nil {
 				log.Error(msg.Err)
-			} else {
-				log.Infof("%s at chain %d has been checked.", tokenConfig.Name, msg.ChainId)
 			}
 			if cnt == 0 {
 				log.Info("Done.")
@@ -740,6 +736,8 @@ func main() {
 		if all {
 			args = conf.GetNetworkIds()
 		}
+		sig := make(chan Msg, 10)
+		cnt := 0
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
@@ -761,15 +759,27 @@ func main() {
 				time.Sleep(500 * time.Millisecond)
 				paused, err := shutTools.CCMPaused(client, netCfg)
 				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
 					return
 				}
 				if paused && !force {
 					log.Warnf("CCM at chain %d has been shut down", netCfg.PolyChainID)
-					return
 				} else if paused && force {
 					log.Infof("CCM at chain %d is running", netCfg.PolyChainID)
 				}
+				sig <- Msg{netCfg.PolyChainID, err}
 			}()
+			cnt += 1
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
 		}
 	default:
 		log.Fatal("unknown function", function)
