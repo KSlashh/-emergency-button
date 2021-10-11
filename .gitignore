@@ -5,4 +5,5 @@ token.json
 keystore/
 *_test.go
 tmp/       
-.idea/     
+.idea/
+testnetConfig.json     

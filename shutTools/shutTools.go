@@ -17,7 +17,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-var DefaultGasLimit uint64 = 300000
+var ok_id int64 = 66
+var ok_test_id int64 = 65
+
+var DefaultGasLimit uint64 = 1000000
 var gasMultipleDecimal int64 = 8
 var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
@@ -157,6 +160,70 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	return nil
 }
 
+func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.Network, toChainId uint64, toProxy []byte) error {
+	privateKey, err := crypto.HexToECDSA(conf.LockProxyOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				conf.PolyChainID,
+				toProxy,
+				toChainId),
+			err)
+	}
+	LockProxyContract, err := abi.NewILockProxy(conf.LockProxyAddress, client)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				conf.PolyChainID,
+				toProxy,
+				toChainId),
+			err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				conf.PolyChainID,
+				toProxy,
+				toChainId),
+			err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				conf.PolyChainID,
+				toProxy,
+				toChainId),
+			err)
+	}
+	tx, err := LockProxyContract.BindProxyHash(auth, toChainId, toProxy)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				conf.PolyChainID,
+				toProxy,
+				toChainId),
+			err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				conf.PolyChainID,
+				toProxy,
+				toChainId),
+			err)
+	}
+	return nil
+}
+
 func TokenMap(client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64) (targetToken []byte, err error) {
 	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxyAddress, client)
 	if err != nil {
@@ -169,6 +236,19 @@ func TokenMap(client *ethclient.Client, conf *config.Network, token common.Addre
 			err)
 	}
 	return LockProxyContract.AssetHashMap(nil, token, toChainId)
+}
+
+func ProxyHashMap(client *ethclient.Client, conf *config.Network, toChainId uint64) (targetProxy []byte, err error) {
+	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxyAddress, client)
+	if err != nil {
+		return nil, fmt.Errorf(
+			fmt.Sprintf(
+				"fail while request Proxy from chain %d =>to=> asset at chain %d,",
+				conf.PolyChainID,
+				toChainId),
+			err)
+	}
+	return LockProxyContract.ProxyHashMap(nil, toChainId)
 }
 
 // Swapper
@@ -526,6 +606,17 @@ func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64, 
 }
 
 func WaitTxConfirm(client *ethclient.Client, hash common.Hash) error {
+
+	// cannot receive receipt at ok chain , so skip it
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf("faild to get chainId %v", err)
+	}
+	if chainId.Int64() == ok_id || chainId.Int64() == ok_test_id {
+		log.Info("Can not get receipt of txns at okex, check transaction %s on explorer yourself, make sure it's confirmed.", hash.Hex())
+		return nil
+	}
+
 	ticker := time.NewTicker(time.Second * 1)
 	end := time.Now().Add(60 * time.Second)
 	for now := range ticker.C {

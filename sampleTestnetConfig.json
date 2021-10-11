@@ -70,15 +70,30 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
       "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
-      "CCMPAddress":"",
-      "LockProxyAddress":"",
-      "SwapperAddress":""
+      "CCMPAddress":"0x15D3f62822a446b8C5fDBBef157f0b82b05c29Ab",
+      "LockProxyAddress":"0x4e5eF0CA5A94b169Fb010fb40DBFD57c4830f446",
+      "SwapperAddress":"0x1B0C55be400e2a7D924032B257Fbc75Bbfd256E7"
     },
 
     {
       "PolyChainID":82,
       "Name":"curve-test",
       "Provider":"",
+      "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
+      "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
+      "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",
+      "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
+      "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
+      "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
+      "CCMPAddress":"",
+      "LockProxyAddress":"",
+      "SwapperAddress":""
+    },
+
+    {
+      "PolyChainID":205,
+      "Name":"arbitrum-test",
+      "Provider":"https://arbitrum-rinkeby.infura.io/v3/19e799349b424211b5758903de1c47ea",
       "CCMPOwnerPrivateKey":"{put CCM owner's sk here}",
       "CCMPOwnerKeyStore":"{put CCM owner's sk keystore path here}",
       "LockProxyOwnerPrivateKey":"{put LockProxy owner's sk here}",

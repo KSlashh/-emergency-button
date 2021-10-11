@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"strconv"
@@ -50,6 +51,7 @@ func init() {
 		"  -func rebindToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
 		"  -func bindSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
 		"  -func shutSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
+		"  -func bindProxy -mul {1} -conf {./config.json} \n"+
 		"  -func pauseSwapper \n"+
 		"  -func unpauseSwapper \n"+
 		"  -func unbindPool \n"+
@@ -640,10 +642,11 @@ func main() {
 						continue
 					} else {
 						log.Warnf(
-							"token %s from chain %d =>to=> chain %d is still bind",
+							"token %s from chain %d =>to=> chain %d is still bind, bind at %x",
 							tokenConfig.Name,
 							tokens[i].ChainId,
-							tokens[j].ChainId)
+							tokens[j].ChainId,
+							toAsset)
 					}
 				}
 				sig <- Msg{tokens[i].ChainId, nil}
@@ -719,12 +722,19 @@ func main() {
 							tokens[i].ChainId,
 							tokens[j].ChainId)
 						continue
-					} else {
+					} else if bytes.Equal(toAsset, tokens[j].Address[:]) {
 						log.Infof(
 							"token %s from chain %d =>to=> chain %d is binded",
 							tokenConfig.Name,
 							tokens[i].ChainId,
 							tokens[j].ChainId)
+					} else {
+						log.Infof(
+							"token %s from chain %d =>to=> chain %d is binded unexpectedly at %x",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							toAsset)
 					}
 				}
 				sig <- Msg{tokens[i].ChainId, nil}
@@ -1012,6 +1022,250 @@ func main() {
 			log.Infof("pool %d at chain %d is registered, currnet poolTokenAddress %x", poolId, netCfg.PolyChainID, currentBind)
 		}
 		log.Info("Done")
+	case "bindProxy":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		var netCfgs []*config.Network
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+			}
+			err = netCfg.PhraseLockProxyPrivateKey()
+			if err != nil {
+				log.Fatalf("%v", err)
+			}
+			netCfgs = append(netCfgs, netCfg)
+		}
+		for i := 0; i < len(netCfgs); i++ {
+			go func(i int) {
+				log.Infof("binding proxy at %s...", netCfgs[i].Name)
+				client, err := ethclient.Dial(netCfgs[i].Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", netCfgs[i].Provider, err)
+					sig <- Msg{netCfgs[i].PolyChainID, err}
+					return
+				}
+				for j := 0; j < len(netCfgs); j++ {
+					if i == j {
+						continue
+					}
+					toProxy, err := shutTools.ProxyHashMap(client, netCfgs[i], netCfgs[j].PolyChainID)
+					if err != nil {
+						err = fmt.Errorf(
+							"fail to bind proxy from chain %d =>to=> chain %d , %s",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID,
+							err)
+						sig <- Msg{netCfgs[i].PolyChainID, err}
+						return
+					}
+					if len(toProxy) != 0 && !force {
+						log.Warnf(
+							"proxy from chain %d =>to=> chain %d is already bind, current bind proxy: %x , ignored",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID,
+							toProxy)
+						continue
+					} else if len(toProxy) != 0 && force {
+						log.Warnf(
+							"proxy from chain %d =>to=> chain %d is already bind, current bind proxy: %x , still force bind",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID,
+							toProxy)
+					}
+					err = shutTools.BindProxyHash(
+						multiple,
+						client,
+						netCfgs[i],
+						netCfgs[j].PolyChainID,
+						netCfgs[j].LockProxyAddress.Bytes())
+					if err != nil {
+						err = fmt.Errorf(
+							"fail to bind proxy from chain %d =>to=> chain %d , %s",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID,
+							err)
+						sig <- Msg{netCfgs[i].PolyChainID, err}
+						return
+					}
+					log.Infof("bindProxy : %d =>to=> %d proxy has be rebind", netCfgs[i].PolyChainID, netCfgs[j].PolyChainID)
+				}
+				sig <- Msg{netCfgs[i].PolyChainID, nil}
+			}(i)
+		}
+		cnt := len(netCfgs)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("proxy at chain %d has been rebind.", msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "checkBindProxy":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		var netCfgs []*config.Network
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+			}
+			err = netCfg.PhraseLockProxyPrivateKey()
+			if err != nil {
+				log.Fatalf("%v", err)
+			}
+			netCfgs = append(netCfgs, netCfg)
+		}
+		for i := 0; i < len(netCfgs); i++ {
+			go func(i int) {
+				log.Infof("binding proxy at %s...", netCfgs[i].Name)
+				client, err := ethclient.Dial(netCfgs[i].Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", netCfgs[i].Provider, err)
+					sig <- Msg{netCfgs[i].PolyChainID, err}
+					return
+				}
+				for j := 0; j < len(netCfgs); j++ {
+					if i == j {
+						continue
+					}
+					toProxy, err := shutTools.ProxyHashMap(client, netCfgs[i], netCfgs[j].PolyChainID)
+					if err != nil {
+						err = fmt.Errorf(
+							"fail to bind proxy from chain %d =>to=> chain %d , %s",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID,
+							err)
+						sig <- Msg{netCfgs[i].PolyChainID, err}
+						return
+					}
+					if len(toProxy) == 0 {
+						log.Warnf(
+							"proxy from chain %d =>to=> chain %d has not been bind",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID)
+						continue
+					} else if bytes.Equal(toProxy, netCfgs[j].LockProxyAddress.Bytes()) {
+						log.Infof(
+							"proxy from chain %d =>to=> chain %d is binded",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID)
+					} else {
+						log.Infof(
+							"proxy from chain %d =>to=> chain %d is binded unexpectedly at %x",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID,
+							toProxy)
+					}
+				}
+				sig <- Msg{netCfgs[i].PolyChainID, nil}
+			}(i)
+		}
+		cnt := len(netCfgs)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "bindSingleProxy":
+		log.Info("Processing...")
+		args := flag.Args()
+		if len(args) != 2 {
+			log.Fatal("Arg num not match")
+		}
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+		}
+		fromProxy := conf.GetNetwork(uint64(id))
+		if fromProxy == nil {
+			log.Fatalf("network with chainId %d not found in %s", id, confFile)
+		}
+		err = fromProxy.PhraseLockProxyPrivateKey()
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+
+		id, err = strconv.Atoi(args[1])
+		if err != nil {
+			log.Errorf("can not parse arg %d : %s , %v", 1, args[1], err)
+		}
+		toProxy := conf.GetNetwork(uint64(id))
+		if toProxy == nil {
+			log.Fatalf("network with chainId %d not found in %s", id, confFile)
+		}
+
+		log.Infof("Binding proxy from %d to %d ...", fromProxy.PolyChainID, toProxy.PolyChainID)
+		client, err := ethclient.Dial(fromProxy.Provider)
+		if err != nil {
+			log.Fatal("fail to dial %s , %s", fromProxy.Provider, err)
+		}
+		mappedProxy, err := shutTools.ProxyHashMap(client, fromProxy, fromProxy.PolyChainID)
+		if err != nil {
+			log.Fatalf(
+				"fail to bind proxy from chain %d =>to=> chain %d , %s",
+				fromProxy.PolyChainID,
+				toProxy.PolyChainID,
+				err)
+		}
+		if len(mappedProxy) != 0 && !force {
+			log.Warnf(
+				"proxy from chain %d =>to=> chain %d is already bind , ignored",
+				fromProxy.PolyChainID,
+				toProxy.PolyChainID)
+			log.Info("Done.")
+			return
+		} else if len(mappedProxy) != 0 && force {
+			log.Warnf(
+				"proxy from chain %d =>to=> chain %d is already bind, current bind proxy: %x , still force bind",
+				fromProxy.PolyChainID,
+				toProxy.PolyChainID,
+				mappedProxy)
+		}
+		err = shutTools.BindProxyHash(
+			multiple,
+			client,
+			fromProxy,
+			fromProxy.PolyChainID,
+			toProxy.LockProxyAddress.Bytes())
+		if err != nil {
+			log.Fatalf(
+				"fail to bind proxy from chain %d =>to=> chain %d , %s",
+				fromProxy.PolyChainID,
+				toProxy.PolyChainID,
+				err)
+		}
+		log.Infof("bindProxy: %d =>to=> %d pair has been bind", fromProxy.PolyChainID, toProxy.PolyChainID)
+		log.Info("Done.")
 	default:
 		log.Fatal("unknown function", function)
 	}
