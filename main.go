@@ -48,18 +48,18 @@ func init() {
 		"  -func shutCCM -mul {1} -conf {./config.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
 		"  -func restartCCM -mul {1} -conf {./config.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
 		"  -func shutToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
-		"  -func rebindToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
+		"  -func bindToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
 		"  -func bindSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
 		"  -func shutSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
 		"  -func bindProxy -mul {1} -conf {./config.json} \n"+
 		"  -func pauseSwapper \n"+
 		"  -func unpauseSwapper \n"+
-		"  -func unbindPool \n"+
-		"  -func checkUnbind \n"+
-		"  -func checkBind \n"+
+		"  -func unbindPool -chain ** -pool **\n"+
+		"  -func checkUnbindToken \n"+
+		"  -func checkBindToken \n"+
 		"  -func checkCCM \n"+
 		"  -func checkSwapperPaused \n"+
-		"  -func poolTokenMap \n"+
+		"  -func poolTokenMap -chain ** -pool **\n"+
 		"  {}contains default value")
 	flag.Parse()
 }
@@ -297,7 +297,7 @@ func main() {
 				break
 			}
 		}
-	case "rebindToken":
+	case "bindToken":
 		log.Info("Processing...")
 		args := flag.Args()
 		tokenConfig, err := config.LoadToken(tokenFile)
@@ -581,7 +581,7 @@ func main() {
 		}
 		log.Infof("%s: %d =>to=> %d pair has been shut", tokenConfig.Name, fromAsset.ChainId, toChainId)
 		log.Info("Done.")
-	case "checkUnbind":
+	case "checkUnbindToken":
 		log.Info("Processing...")
 		args := flag.Args()
 		tokenConfig, err := config.LoadToken(tokenFile)
@@ -663,7 +663,7 @@ func main() {
 				break
 			}
 		}
-	case "checkBind":
+	case "checkBindToken":
 		log.Info("Processing...")
 		args := flag.Args()
 		tokenConfig, err := config.LoadToken(tokenFile)

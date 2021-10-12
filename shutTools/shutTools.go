@@ -20,7 +20,7 @@ import (
 var ok_id int64 = 66
 var ok_test_id int64 = 65
 
-var DefaultGasLimit uint64 = 1000000
+var DefaultGasLimit uint64 = 0 // get gas limit via EstimateGas
 var gasMultipleDecimal int64 = 8
 var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
