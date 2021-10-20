@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
+	"math"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -45,21 +48,28 @@ func init() {
 	flag.BoolVar(&force, "force", false, "need force send override bind or not")
 	flag.BoolVar(&all, "all", false, "shut/restart all in config file")
 	flag.StringVar(&function, "func", "", "choose function to run:\n"+
+		"#### CCM \n"+
 		"  -func shutCCM -mul {1} -conf {./config.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
 		"  -func restartCCM -mul {1} -conf {./config.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
+		"  -func checkCCM \n"+
+		"#### LockProxy \n"+
 		"  -func shutToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
 		"  -func bindToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
 		"  -func bindSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
 		"  -func shutSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
+		"  -func checkUnbindToken \n"+
+		"  -func checkBindToken \n"+
 		"  -func bindProxy -mul {1} -conf {./config.json} \n"+
+		"#### Swapper \n"+
 		"  -func pauseSwapper \n"+
 		"  -func unpauseSwapper \n"+
 		"  -func unbindPool -chain ** -pool **\n"+
-		"  -func checkUnbindToken \n"+
-		"  -func checkBindToken \n"+
-		"  -func checkCCM \n"+
 		"  -func checkSwapperPaused \n"+
 		"  -func poolTokenMap -chain ** -pool **\n"+
+		"  -func CheckFeeCollected\n"+
+		"  -func ExtractFeeSwapper\n"+
+		"#### Wrapper \n"+
+		"  -func ExtractFeeWrapper\n"+
 		"  {}contains default value")
 	flag.Parse()
 }
@@ -1266,6 +1276,201 @@ func main() {
 		}
 		log.Infof("bindProxy: %d =>to=> %d pair has been bind", fromProxy.PolyChainID, toProxy.PolyChainID)
 		log.Info("Done.")
+	case "CheckFeeCollected":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all || len(args) == 0 {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 20)
+		cnt := 0
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			func() {
+				log.Infof("Checking %s ...", netCfg.Name)
+				time.Sleep(500 * time.Millisecond)
+				bs, err := client.BalanceAt(context.Background(), netCfg.SwapperAddress, nil)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				bw, err := client.BalanceAt(context.Background(), netCfg.WrapperAddress, nil)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				if netCfg.SwapperAddress == ADDRESS_ZERO {
+					bs = big.NewInt(0)
+				}
+				if netCfg.WrapperAddress == ADDRESS_ZERO {
+					bw = big.NewInt(0)
+				}
+				balanceSwapper := big.NewFloat(0)
+				balanceWrapper := big.NewFloat(0)
+				balanceSwapper.SetString(bs.String())
+				balanceWrapper.SetString(bw.String())
+				balanceSwapper.Quo(balanceSwapper, big.NewFloat(math.Pow(10, 18)))
+				balanceWrapper.Quo(balanceWrapper, big.NewFloat(math.Pow(10, 18)))
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				log.Infof("Balance of swapper (nativeToken) at %s is %f ", netCfg.Name, balanceSwapper)
+				log.Infof("Balance of wrapper (nativeToken) at %s is %f ", netCfg.Name, balanceWrapper)
+				sig <- Msg{netCfg.PolyChainID, err}
+			}()
+			cnt += 1
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "ExtractFeeSwapper":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		cnt := 0
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			err = netCfg.PhraseSwapperFeeCollectorPrivateKey()
+			if err != nil {
+				log.Errorf("%v", err)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			go func() {
+				log.Infof("Extract fee from swapper at %s ...", netCfg.Name)
+
+				balance, err := client.BalanceAt(context.Background(), netCfg.SwapperAddress, nil)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				zeroBalance := balance.Int64() == 0
+				if zeroBalance && !force {
+					log.Warnf("Swapper at chain %d do not have balance, ignored", netCfg.PolyChainID)
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				} else if zeroBalance && force {
+					log.Warnf("Swapper at chain %d do not have balance, still force extractFee", netCfg.PolyChainID)
+				}
+
+				err = shutTools.ExtractFeeSwapper(multiple, client, netCfg, ADDRESS_ZERO)
+				sig <- Msg{netCfg.PolyChainID, err}
+			}()
+			cnt += 1
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("Fee has been taken from swapper at chain %d .", msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "ExtractFeeWrapper":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		cnt := 0
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			err = netCfg.PhraseWrapperFeeCollectorPrivateKey()
+			if err != nil {
+				log.Errorf("%v", err)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			go func() {
+				log.Infof("Extract fee from wrapper at %s ...", netCfg.Name)
+
+				balance, err := client.BalanceAt(context.Background(), netCfg.WrapperAddress, nil)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				zeroBalance := balance.Int64() == 0
+				if zeroBalance && !force {
+					log.Warnf("Wrapper at chain %d do not have balance, ignored", netCfg.PolyChainID)
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				} else if zeroBalance && force {
+					log.Warnf("Wrapper at chain %d do not have balance, still force extractFee", netCfg.PolyChainID)
+				}
+
+				err = shutTools.ExtractFeeWrapper(multiple, client, netCfg, ADDRESS_ZERO)
+				sig <- Msg{netCfg.PolyChainID, err}
+			}()
+			cnt += 1
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("Fee has been taken from wrapper at chain %d .", msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
 	default:
 		log.Fatal("unknown function", function)
 	}

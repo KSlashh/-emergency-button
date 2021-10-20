@@ -252,6 +252,65 @@ func ProxyHashMap(client *ethclient.Client, conf *config.Network, toChainId uint
 }
 
 // Swapper
+func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, tokenAddress common.Address) error {
+	if conf.SwapperAddress == ADDRESS_ZERO {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at Swapper at chain %d, swapper address in config is ZERO",
+				conf.PolyChainID),
+		)
+	}
+	privateKey, err := crypto.HexToECDSA(conf.SwapperFeeCollectorPrivateKey)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at Swapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	SwapperContract, err := abi.NewIWrapper(conf.SwapperAddress, client)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at Swapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at Swapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at Swapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	tx, err := SwapperContract.ExtractFee(auth, tokenAddress)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at Swapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at Swapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	return nil
+}
+
 func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, poolId uint64, poolTokenAddress common.Address) error {
 	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
 	if err != nil {
@@ -568,6 +627,66 @@ func AssetInPool(client *ethclient.Client, conf *config.Network, poolId uint64, 
 		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
 	}
 	return SwapperContract.AssetInPool(nil, assetHash, poolId)
+}
+
+// Wrapper
+func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, tokenAddress common.Address) error {
+	if conf.WrapperAddress == ADDRESS_ZERO {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
+				conf.PolyChainID),
+		)
+	}
+	privateKey, err := crypto.HexToECDSA(conf.WrapperFeeCollectorPrivateKey)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at PolyWrapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	WrapperContract, err := abi.NewIWrapper(conf.WrapperAddress, client)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at PolyWrapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at PolyWrapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at PolyWrapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	tx, err := WrapperContract.ExtractFee(auth, tokenAddress)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at PolyWrapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at PolyWrapper at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	return nil
 }
 
 // Basic

@@ -10,9 +10,14 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
       "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
-      "CCMPAddress":"0xb600c8a2e8852832B75DB9Da1A3A1c173eAb28d8",
-      "LockProxyAddress":"0xD8aE73e06552E270340b63A8bcAbf9277a1aac99",
-      "SwapperAddress":""
+      "SwapperFeeCollectorPrivateKey":"{put Swapper fee collector's sk here}",
+      "SwapperFeeCollectorKeyStore":"{put Swapper fee collector's sk keystore path here}",
+      "WrapperFeeCollectorPrivateKey":"{put Wrapper fee collector's sk here}",
+      "WrapperFeeCollectorKeyStore":"{put Wrapper fee collector's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000",
+      "WrapperAddress":"0x0000000000000000000000000000000000000000"
     },
 
     {
@@ -25,9 +30,14 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
       "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
-      "CCMPAddress":"0x441C035446c947a97bD36b425B67907244576990",
-      "LockProxyAddress":"0x097Ae585BfEf78DDC8E266ABCb840dAF7265130c",
-      "SwapperAddress":""
+      "SwapperFeeCollectorPrivateKey":"{put Swapper fee collector's sk here}",
+      "SwapperFeeCollectorKeyStore":"{put Swapper fee collector's sk keystore path here}",
+      "WrapperFeeCollectorPrivateKey":"{put Wrapper fee collector's sk here}",
+      "WrapperFeeCollectorKeyStore":"{put Wrapper fee collector's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000",
+      "WrapperAddress":"0x0000000000000000000000000000000000000000"
     },
 
     {
@@ -40,9 +50,14 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
       "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
-      "CCMPAddress":"0xc5757b5d22984E534004cC7Fb1D59eD14EC510a5",
-      "LockProxyAddress":"0x4a76E52600C6285029c8f7c52183cf86282cA5b8",
-      "SwapperAddress":""
+      "SwapperFeeCollectorPrivateKey":"{put Swapper fee collector's sk here}",
+      "SwapperFeeCollectorKeyStore":"{put Swapper fee collector's sk keystore path here}",
+      "WrapperFeeCollectorPrivateKey":"{put Wrapper fee collector's sk here}",
+      "WrapperFeeCollectorKeyStore":"{put Wrapper fee collector's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000",
+      "WrapperAddress":"0x0000000000000000000000000000000000000000"
     },
 
     {
@@ -55,9 +70,14 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
       "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
-      "CCMPAddress":"0x38917884b397447227fb45cbA0342F1bFf7A3470",
-      "LockProxyAddress":"0x74cE7D56cd1b5AEe9A3345A490b5Ed768134C7D4",
-      "SwapperAddress":""
+      "SwapperFeeCollectorPrivateKey":"{put Swapper fee collector's sk here}",
+      "SwapperFeeCollectorKeyStore":"{put Swapper fee collector's sk keystore path here}",
+      "WrapperFeeCollectorPrivateKey":"{put Wrapper fee collector's sk here}",
+      "WrapperFeeCollectorKeyStore":"{put Wrapper fee collector's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000",
+      "WrapperAddress":"0x0000000000000000000000000000000000000000"
     },
 
     {
@@ -70,9 +90,14 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
       "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
-      "CCMPAddress":"0x15D3f62822a446b8C5fDBBef157f0b82b05c29Ab",
-      "LockProxyAddress":"0x4e5eF0CA5A94b169Fb010fb40DBFD57c4830f446",
-      "SwapperAddress":"0x1B0C55be400e2a7D924032B257Fbc75Bbfd256E7"
+      "SwapperFeeCollectorPrivateKey":"{put Swapper fee collector's sk here}",
+      "SwapperFeeCollectorKeyStore":"{put Swapper fee collector's sk keystore path here}",
+      "WrapperFeeCollectorPrivateKey":"{put Wrapper fee collector's sk here}",
+      "WrapperFeeCollectorKeyStore":"{put Wrapper fee collector's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000",
+      "WrapperAddress":"0x0000000000000000000000000000000000000000"
     },
 
     {
@@ -85,9 +110,14 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
       "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
-      "CCMPAddress":"",
-      "LockProxyAddress":"",
-      "SwapperAddress":""
+      "SwapperFeeCollectorPrivateKey":"{put Swapper fee collector's sk here}",
+      "SwapperFeeCollectorKeyStore":"{put Swapper fee collector's sk keystore path here}",
+      "WrapperFeeCollectorPrivateKey":"{put Wrapper fee collector's sk here}",
+      "WrapperFeeCollectorKeyStore":"{put Wrapper fee collector's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000",
+      "WrapperAddress":"0x0000000000000000000000000000000000000000"
     },
 
     {
@@ -100,9 +130,14 @@
       "LockProxyOwnerKeyStore":"{put LockProxy owner's sk keystore path here}",
       "SwapperOwnerPrivateKey":"{put Swapper owner's sk here}",
       "SwapperOwnerKeyStore":"{put Swapper owner's sk keystore path here}",
-      "CCMPAddress":"",
-      "LockProxyAddress":"",
-      "SwapperAddress":""
+      "SwapperFeeCollectorPrivateKey":"{put Swapper fee collector's sk here}",
+      "SwapperFeeCollectorKeyStore":"{put Swapper fee collector's sk keystore path here}",
+      "WrapperFeeCollectorPrivateKey":"{put Wrapper fee collector's sk here}",
+      "WrapperFeeCollectorKeyStore":"{put Wrapper fee collector's sk keystore path here}",
+      "CCMPAddress":"0x0000000000000000000000000000000000000000",
+      "LockProxyAddress":"0x0000000000000000000000000000000000000000",
+      "SwapperAddress":"0x0000000000000000000000000000000000000000",
+      "WrapperAddress":"0x0000000000000000000000000000000000000000"
     }
   ]
 }

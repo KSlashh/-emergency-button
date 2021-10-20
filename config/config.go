@@ -14,18 +14,23 @@ import (
 )
 
 type Network struct {
-	PolyChainID              uint64
-	Name                     string
-	Provider                 string
-	CCMPOwnerPrivateKey      string
-	CCMPOwnerKeyStore        string
-	LockProxyOwnerPrivateKey string
-	LockProxyOwnerKeyStore   string
-	SwapperOwnerPrivateKey   string
-	SwapperOwnerKeyStore     string
-	CCMPAddress              common.Address
-	LockProxyAddress         common.Address
-	SwapperAddress           common.Address
+	PolyChainID                   uint64
+	Name                          string
+	Provider                      string
+	CCMPOwnerPrivateKey           string
+	CCMPOwnerKeyStore             string
+	LockProxyOwnerPrivateKey      string
+	LockProxyOwnerKeyStore        string
+	SwapperOwnerPrivateKey        string
+	SwapperOwnerKeyStore          string
+	SwapperFeeCollectorPrivateKey string
+	SwapperFeeCollectorKeyStore   string
+	WrapperFeeCollectorPrivateKey string
+	WrapperFeeCollectorKeyStore   string
+	CCMPAddress                   common.Address
+	LockProxyAddress              common.Address
+	SwapperAddress                common.Address
+	WrapperAddress                common.Address
 }
 
 type Config struct {
@@ -120,7 +125,7 @@ func (n *Network) PhraseSwapperPrivateKey() (err error) {
 	_, hasPk3 := crypto.HexToECDSA(n.SwapperOwnerPrivateKey)
 	hasCache3 := n.SwapperOwnerFromKeyStore(passwordCache)
 	ok := hasPk3 == nil || hasCache3 == nil
-	if !ok { // need to recover LockProxy owner privatekey
+	if !ok { // need to recover Swapper owner privatekey
 		fmt.Printf("Please type in password of %s: ", n.SwapperOwnerKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
@@ -131,6 +136,50 @@ func (n *Network) PhraseSwapperPrivateKey() (err error) {
 		password = strings.Replace(password, "\n", "", -1)
 		passwordCache = password
 		err = n.SwapperOwnerFromKeyStore(password)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+	}
+	return nil
+}
+
+func (n *Network) PhraseSwapperFeeCollectorPrivateKey() (err error) {
+	_, hasPk4 := crypto.HexToECDSA(n.SwapperFeeCollectorPrivateKey)
+	hasCache4 := n.SwapperFeeCollectorFromKeyStore(passwordCache)
+	ok := hasPk4 == nil || hasCache4 == nil
+	if !ok { // need to recover SwapperFeeCollector privatekey
+		fmt.Printf("Please type in password of %s: ", n.SwapperFeeCollectorKeyStore)
+		pass, err := terminal.ReadPassword(0)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+		fmt.Println()
+		password := string(pass)
+		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
+		err = n.SwapperFeeCollectorFromKeyStore(password)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+	}
+	return nil
+}
+
+func (n *Network) PhraseWrapperFeeCollectorPrivateKey() (err error) {
+	_, hasPk5 := crypto.HexToECDSA(n.WrapperFeeCollectorPrivateKey)
+	hasCache5 := n.WrapperFeeCollectorFromKeyStore(passwordCache)
+	ok := hasPk5 == nil || hasCache5 == nil
+	if !ok { // need to recover WrapperFeeCollector privatekey
+		fmt.Printf("Please type in password of %s: ", n.WrapperFeeCollectorKeyStore)
+		pass, err := terminal.ReadPassword(0)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+		fmt.Println()
+		password := string(pass)
+		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
+		err = n.WrapperFeeCollectorFromKeyStore(password)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
@@ -174,6 +223,32 @@ func (n *Network) SwapperOwnerFromKeyStore(pswd string) (err error) {
 		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
 	}
 	n.SwapperOwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key3.PrivateKey))
+	return nil
+}
+
+func (n *Network) SwapperFeeCollectorFromKeyStore(pswd string) (err error) {
+	ks4, err := ioutil.ReadFile(n.SwapperFeeCollectorKeyStore)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	key4, err := keystore.DecryptKey(ks4, pswd)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	n.SwapperFeeCollectorPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key4.PrivateKey))
+	return nil
+}
+
+func (n *Network) WrapperFeeCollectorFromKeyStore(pswd string) (err error) {
+	ks5, err := ioutil.ReadFile(n.WrapperFeeCollectorKeyStore)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	key5, err := keystore.DecryptKey(ks5, pswd)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	n.WrapperFeeCollectorPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key5.PrivateKey))
 	return nil
 }
 
