@@ -732,6 +732,7 @@ func WaitTxConfirm(client *ethclient.Client, hash common.Hash) error {
 		return fmt.Errorf("faild to get chainId %v", err)
 	}
 	if chainId.Int64() == ok_id || chainId.Int64() == ok_test_id {
+		time.Sleep(5 * time.Second)
 		log.Info("Can not get receipt of txns at okex, check transaction %s on explorer yourself, make sure it's confirmed.", hash.Hex())
 		return nil
 	}

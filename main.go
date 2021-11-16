@@ -343,7 +343,7 @@ func main() {
 		}
 		for i := 0; i < len(tokens); i++ {
 			go func(i int) {
-				log.Infof("Rebinding %s at %s...", tokenConfig.Name, tokens[i].NetCfg.Name)
+				log.Infof("Binding %s at %s...", tokenConfig.Name, tokens[i].NetCfg.Name)
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
 				if err != nil {
 					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
@@ -357,7 +357,7 @@ func main() {
 					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
 					if err != nil {
 						err = fmt.Errorf(
-							"fail to rebind %s from chain %d =>to=> chain %d , %s",
+							"fail to bind %s from chain %d =>to=> chain %d , %s",
 							tokenConfig.Name,
 							tokens[i].ChainId,
 							tokens[j].ChainId,
@@ -390,7 +390,7 @@ func main() {
 						tokens[j].Address.Bytes())
 					if err != nil {
 						err = fmt.Errorf(
-							"fail to rebind %s from chain %d =>to=> chain %d , %s",
+							"fail to bind %s from chain %d =>to=> chain %d , %s",
 							tokenConfig.Name,
 							tokens[i].ChainId,
 							tokens[j].ChainId,
@@ -398,7 +398,7 @@ func main() {
 						sig <- Msg{tokens[i].ChainId, err}
 						return
 					}
-					log.Infof("%s: %d =>to=> %d pair has be rebind", tokenConfig.Name, tokens[i].ChainId, tokens[j].ChainId)
+					log.Infof("%s: %d =>to=> %d pair has be bind", tokenConfig.Name, tokens[i].ChainId, tokens[j].ChainId)
 				}
 				sig <- Msg{tokens[i].ChainId, nil}
 			}(i)
@@ -409,7 +409,7 @@ func main() {
 			if msg.Err != nil {
 				log.Error(msg.Err)
 			} else {
-				log.Infof("%s at chain %d has been rebind.", tokenConfig.Name, msg.ChainId)
+				log.Infof("%s at chain %d has been bind.", tokenConfig.Name, msg.ChainId)
 			}
 			if cnt == 0 {
 				log.Info("Done.")
@@ -469,7 +469,7 @@ func main() {
 		mappedAsset, err := shutTools.TokenMap(client, fromAsset.NetCfg, fromAsset.Address, toAsset.ChainId)
 		if err != nil {
 			log.Fatalf(
-				"fail to rebind %s from chain %d =>to=> chain %d , %s",
+				"fail to bind %s from chain %d =>to=> chain %d , %s",
 				tokenConfig.Name,
 				fromAsset.ChainId,
 				toAsset.ChainId,
@@ -501,7 +501,7 @@ func main() {
 			toAsset.Address.Bytes())
 		if err != nil {
 			log.Fatalf(
-				"fail to rebind %s from chain %d =>to=> chain %d , %s",
+				"fail to bind %s from chain %d =>to=> chain %d , %s",
 				tokenConfig.Name,
 				fromAsset.ChainId,
 				toAsset.ChainId,
@@ -601,7 +601,6 @@ func main() {
 		if all || len(args) == 0 {
 			args = tokenConfig.GetTokenIds()
 		}
-		sig := make(chan Msg, 10)
 		var tokens []*Token
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
@@ -622,12 +621,12 @@ func main() {
 			tokens = append(tokens, &Token{uint64(id), address, netCfg})
 		}
 		for i := 0; i < len(tokens); i++ {
-			go func(i int) {
+			func(i int) {
 				log.Infof("Checking %s at %s...", tokenConfig.Name, tokens[i].NetCfg.Name)
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
 				if err != nil {
 					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
-					sig <- Msg{tokens[i].ChainId, err}
+					log.Errorf(err.Error())
 					return
 				}
 				for j := 0; j < len(tokens); j++ {
@@ -636,7 +635,7 @@ func main() {
 					}
 					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
 					if err != nil {
-						log.Fatalf(
+						log.Errorf(
 							"fail to check %s from chain %d =>to=> chain %d , %s",
 							tokenConfig.Name,
 							tokens[i].ChainId,
@@ -659,20 +658,10 @@ func main() {
 							toAsset)
 					}
 				}
-				sig <- Msg{tokens[i].ChainId, nil}
+				log.Infof("Check %s at %s done", tokenConfig.Name, tokens[i].NetCfg.Name)
 			}(i)
 		}
-		cnt := len(tokens)
-		for msg := range sig {
-			cnt -= 1
-			if msg.Err != nil {
-				log.Error(msg.Err)
-			}
-			if cnt == 0 {
-				log.Info("Done.")
-				break
-			}
-		}
+		log.Info("All Done.")
 	case "checkBindToken":
 		log.Info("Processing...")
 		args := flag.Args()
@@ -683,7 +672,6 @@ func main() {
 		if all || len(args) == 0 {
 			args = tokenConfig.GetTokenIds()
 		}
-		sig := make(chan Msg, 10)
 		var tokens []*Token
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
@@ -704,12 +692,12 @@ func main() {
 			tokens = append(tokens, &Token{uint64(id), address, netCfg})
 		}
 		for i := 0; i < len(tokens); i++ {
-			go func(i int) {
+			func(i int) {
 				log.Infof("Checking %s at %s...", tokenConfig.Name, tokens[i].NetCfg.Name)
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
 				if err != nil {
 					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
-					sig <- Msg{tokens[i].ChainId, err}
+					log.Errorf(err.Error())
 					return
 				}
 				for j := 0; j < len(tokens); j++ {
@@ -718,7 +706,7 @@ func main() {
 					}
 					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
 					if err != nil {
-						log.Fatalf(
+						log.Errorf(
 							"fail to check %s from chain %d =>to=> chain %d , %s",
 							tokenConfig.Name,
 							tokens[i].ChainId,
@@ -747,20 +735,10 @@ func main() {
 							toAsset)
 					}
 				}
-				sig <- Msg{tokens[i].ChainId, nil}
+				log.Infof("Check %s at %s done", tokenConfig.Name, tokens[i].NetCfg.Name)
 			}(i)
 		}
-		cnt := len(tokens)
-		for msg := range sig {
-			cnt -= 1
-			if msg.Err != nil {
-				log.Error(msg.Err)
-			}
-			if cnt == 0 {
-				log.Info("Done.")
-				break
-			}
-		}
+		log.Info("All Done.")
 	case "checkCCM":
 		log.Info("Processing...")
 		args := flag.Args()
@@ -1108,7 +1086,7 @@ func main() {
 						sig <- Msg{netCfgs[i].PolyChainID, err}
 						return
 					}
-					log.Infof("bindProxy : %d =>to=> %d proxy has be rebind", netCfgs[i].PolyChainID, netCfgs[j].PolyChainID)
+					log.Infof("bindProxy : %d =>to=> %d proxy has be bind", netCfgs[i].PolyChainID, netCfgs[j].PolyChainID)
 				}
 				sig <- Msg{netCfgs[i].PolyChainID, nil}
 			}(i)
@@ -1119,7 +1097,7 @@ func main() {
 			if msg.Err != nil {
 				log.Error(msg.Err)
 			} else {
-				log.Infof("proxy at chain %d has been rebind.", msg.ChainId)
+				log.Infof("proxy at chain %d has been bind.", msg.ChainId)
 			}
 			if cnt == 0 {
 				log.Info("Done.")
@@ -1129,10 +1107,9 @@ func main() {
 	case "checkBindProxy":
 		log.Info("Processing...")
 		args := flag.Args()
-		if all {
+		if all || len(args) == 0 {
 			args = conf.GetNetworkIds()
 		}
-		sig := make(chan Msg, 10)
 		var netCfgs []*config.Network
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
@@ -1144,19 +1121,15 @@ func main() {
 			if netCfg == nil {
 				log.Fatalf("network with chainId %d not found in %s", id, confFile)
 			}
-			err = netCfg.PhraseLockProxyPrivateKey()
-			if err != nil {
-				log.Fatalf("%v", err)
-			}
 			netCfgs = append(netCfgs, netCfg)
 		}
 		for i := 0; i < len(netCfgs); i++ {
-			go func(i int) {
-				log.Infof("binding proxy at %s...", netCfgs[i].Name)
+			func(i int) {
+				log.Infof("checking proxy at %s...", netCfgs[i].Name)
 				client, err := ethclient.Dial(netCfgs[i].Provider)
 				if err != nil {
 					err = fmt.Errorf("fail to dial %s , %s", netCfgs[i].Provider, err)
-					sig <- Msg{netCfgs[i].PolyChainID, err}
+					log.Errorf(err.Error())
 					return
 				}
 				for j := 0; j < len(netCfgs); j++ {
@@ -1170,7 +1143,7 @@ func main() {
 							netCfgs[i].PolyChainID,
 							netCfgs[j].PolyChainID,
 							err)
-						sig <- Msg{netCfgs[i].PolyChainID, err}
+						log.Errorf(err.Error())
 						return
 					}
 					if len(toProxy) == 0 {
@@ -1192,20 +1165,10 @@ func main() {
 							toProxy)
 					}
 				}
-				sig <- Msg{netCfgs[i].PolyChainID, nil}
+				log.Infof("check proxy at %s done", netCfgs[i].Name)
 			}(i)
 		}
-		cnt := len(netCfgs)
-		for msg := range sig {
-			cnt -= 1
-			if msg.Err != nil {
-				log.Error(msg.Err)
-			}
-			if cnt == 0 {
-				log.Info("Done.")
-				break
-			}
-		}
+		log.Info("All Done.")
 	case "bindSingleProxy":
 		log.Info("Processing...")
 		args := flag.Args()
@@ -1239,7 +1202,7 @@ func main() {
 		if err != nil {
 			log.Fatal("fail to dial %s , %s", fromProxy.Provider, err)
 		}
-		mappedProxy, err := shutTools.ProxyHashMap(client, fromProxy, fromProxy.PolyChainID)
+		mappedProxy, err := shutTools.ProxyHashMap(client, fromProxy, toProxy.PolyChainID)
 		if err != nil {
 			log.Fatalf(
 				"fail to bind proxy from chain %d =>to=> chain %d , %s",
@@ -1265,7 +1228,7 @@ func main() {
 			multiple,
 			client,
 			fromProxy,
-			fromProxy.PolyChainID,
+			toProxy.PolyChainID,
 			toProxy.LockProxyAddress.Bytes())
 		if err != nil {
 			log.Fatalf(
