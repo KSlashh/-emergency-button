@@ -594,11 +594,18 @@ func main() {
 	case "checkUnbindToken":
 		log.Info("Processing...")
 		args := flag.Args()
+		flag := -1
 		tokenConfig, err := config.LoadToken(tokenFile)
 		if err != nil {
 			log.Fatal("LoadToken fail", err)
 		}
 		if all || len(args) == 0 {
+			args = tokenConfig.GetTokenIds()
+		} else if len(args) == 1 {
+			flag, err = strconv.Atoi(args[0])
+			if err != nil {
+				log.Fatalf("can not parse arg %d : %s , %v", 0, args[0], err)
+			}
 			args = tokenConfig.GetTokenIds()
 		}
 		var tokens []*Token
@@ -621,6 +628,9 @@ func main() {
 			tokens = append(tokens, &Token{uint64(id), address, netCfg})
 		}
 		for i := 0; i < len(tokens); i++ {
+			if (flag != -1) && (int(tokens[i].ChainId) != flag) {
+				continue
+			}
 			func(i int) {
 				log.Infof("Checking %s at %s...", tokenConfig.Name, tokens[i].NetCfg.Name)
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
@@ -659,17 +669,25 @@ func main() {
 					}
 				}
 				log.Infof("Check %s at %s done", tokenConfig.Name, tokens[i].NetCfg.Name)
+				log.Info("-------------------------------------------------------------")
 			}(i)
 		}
 		log.Info("All Done.")
 	case "checkBindToken":
 		log.Info("Processing...")
 		args := flag.Args()
+		flag := -1
 		tokenConfig, err := config.LoadToken(tokenFile)
 		if err != nil {
 			log.Fatal("LoadToken fail", err)
 		}
 		if all || len(args) == 0 {
+			args = tokenConfig.GetTokenIds()
+		} else if len(args) == 1 {
+			flag, err = strconv.Atoi(args[0])
+			if err != nil {
+				log.Fatalf("can not parse arg %d : %s , %v", 0, args[0], err)
+			}
 			args = tokenConfig.GetTokenIds()
 		}
 		var tokens []*Token
@@ -692,6 +710,9 @@ func main() {
 			tokens = append(tokens, &Token{uint64(id), address, netCfg})
 		}
 		for i := 0; i < len(tokens); i++ {
+			if (flag != -1) && (int(tokens[i].ChainId) != flag) {
+				continue
+			}
 			func(i int) {
 				log.Infof("Checking %s at %s...", tokenConfig.Name, tokens[i].NetCfg.Name)
 				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
@@ -736,6 +757,7 @@ func main() {
 					}
 				}
 				log.Infof("Check %s at %s done", tokenConfig.Name, tokens[i].NetCfg.Name)
+				log.Info("-------------------------------------------------------------")
 			}(i)
 		}
 		log.Info("All Done.")
@@ -1107,7 +1129,14 @@ func main() {
 	case "checkBindProxy":
 		log.Info("Processing...")
 		args := flag.Args()
+		flag := -1
 		if all || len(args) == 0 {
+			args = conf.GetNetworkIds()
+		} else if len(args) == 1 {
+			flag, err = strconv.Atoi(args[0])
+			if err != nil {
+				log.Fatalf("can not parse arg %d : %s , %v", 0, args[0], err)
+			}
 			args = conf.GetNetworkIds()
 		}
 		var netCfgs []*config.Network
@@ -1124,6 +1153,9 @@ func main() {
 			netCfgs = append(netCfgs, netCfg)
 		}
 		for i := 0; i < len(netCfgs); i++ {
+			if (flag != -1) && (int(netCfgs[i].PolyChainID) != flag) {
+				continue
+			}
 			func(i int) {
 				log.Infof("checking proxy at %s...", netCfgs[i].Name)
 				client, err := ethclient.Dial(netCfgs[i].Provider)
@@ -1166,6 +1198,7 @@ func main() {
 					}
 				}
 				log.Infof("check proxy at %s done", netCfgs[i].Name)
+				log.Info("-------------------------------------------------------------")
 			}(i)
 		}
 		log.Info("All Done.")
