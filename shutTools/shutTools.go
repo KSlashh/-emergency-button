@@ -25,12 +25,12 @@ var gasMultipleDecimal int64 = 8
 var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 // CCM
-func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
-	privateKey, err := crypto.HexToECDSA(conf.CCMPOwnerPrivateKey)
+func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.CCMPOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
-	CCMPContract, err := abi.NewICCMP(conf.CCMPAddress, client)
+	CCMPContract, err := abi.NewICCMP(conf.EthCrossChainManagerProxy, client)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
 	}
@@ -53,12 +53,12 @@ func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network
 	return nil
 }
 
-func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
-	privateKey, err := crypto.HexToECDSA(conf.CCMPOwnerPrivateKey)
+func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.CCMPOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
-	CCMPContract, err := abi.NewICCMP(conf.CCMPAddress, client)
+	CCMPContract, err := abi.NewICCMP(conf.EthCrossChainManagerProxy, client)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
 	}
@@ -81,8 +81,8 @@ func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	return nil
 }
 
-func CCMPaused(client *ethclient.Client, conf *config.Network) (paused bool, err error) {
-	CCMPContract, err := abi.NewICCMPCaller(conf.CCMPAddress, client)
+func CCMPaused(client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey) (paused bool, err error) {
+	CCMPContract, err := abi.NewICCMPCaller(conf.EthCrossChainManagerProxy, client)
 	if err != nil {
 		return false, fmt.Errorf(fmt.Sprintf("fail while request CCM of %s ,", conf.Name), err)
 	}
@@ -90,8 +90,8 @@ func CCMPaused(client *ethclient.Client, conf *config.Network) (paused bool, err
 }
 
 // LockProxy
-func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64, toAsset []byte) error {
-	privateKey, err := crypto.HexToECDSA(conf.LockProxyOwnerPrivateKey)
+func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey,token common.Address, toChainId uint64, toAsset []byte) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -102,7 +102,7 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 				toChainId),
 			err)
 	}
-	LockProxyContract, err := abi.NewILockProxy(conf.LockProxyAddress, client)
+	LockProxyContract, err := abi.NewILockProxy(conf.LockProxy, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -160,8 +160,8 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	return nil
 }
 
-func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.Network, toChainId uint64, toProxy []byte) error {
-	privateKey, err := crypto.HexToECDSA(conf.LockProxyOwnerPrivateKey)
+func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey,toChainId uint64, toProxy []byte) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -171,7 +171,7 @@ func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.N
 				toChainId),
 			err)
 	}
-	LockProxyContract, err := abi.NewILockProxy(conf.LockProxyAddress, client)
+	LockProxyContract, err := abi.NewILockProxy(conf.LockProxy, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -225,7 +225,7 @@ func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.N
 }
 
 func TokenMap(client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64) (targetToken []byte, err error) {
-	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxyAddress, client)
+	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxy, client)
 	if err != nil {
 		return nil, fmt.Errorf(
 			fmt.Sprintf(
@@ -239,7 +239,7 @@ func TokenMap(client *ethclient.Client, conf *config.Network, token common.Addre
 }
 
 func ProxyHashMap(client *ethclient.Client, conf *config.Network, toChainId uint64) (targetProxy []byte, err error) {
-	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxyAddress, client)
+	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxy, client)
 	if err != nil {
 		return nil, fmt.Errorf(
 			fmt.Sprintf(
@@ -252,15 +252,15 @@ func ProxyHashMap(client *ethclient.Client, conf *config.Network, toChainId uint
 }
 
 // Swapper
-func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, tokenAddress common.Address) error {
-	if conf.SwapperAddress == ADDRESS_ZERO {
+func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey,tokenAddress common.Address) error {
+	if conf.Swapper == ADDRESS_ZERO {
 		return fmt.Errorf(
 			fmt.Sprintf(
 				"fail while extract fee at Swapper at chain %d, swapper address in config is ZERO",
 				conf.PolyChainID),
 		)
 	}
-	privateKey, err := crypto.HexToECDSA(conf.SwapperFeeCollectorPrivateKey)
+	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperFeeCollectorPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -268,7 +268,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 				conf.PolyChainID),
 			err)
 	}
-	SwapperContract, err := abi.NewIWrapper(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewIWrapper(conf.Swapper, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -311,8 +311,8 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	return nil
 }
 
-func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, poolId uint64, poolTokenAddress common.Address) error {
-	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey, poolId uint64, poolTokenAddress common.Address) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -321,7 +321,7 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 				conf.PolyChainID),
 			err)
 	}
-	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -369,8 +369,8 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	return nil
 }
 
-func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, fromAssetHash []byte, poolId uint64) error {
-	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey,fromAssetHash []byte, poolId uint64) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -380,7 +380,7 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 				conf.PolyChainID),
 			err)
 	}
-	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -433,8 +433,8 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 	return nil
 }
 
-func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Network, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
-	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -443,7 +443,7 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 				conf.PolyChainID),
 			err)
 	}
-	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -491,8 +491,8 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	return nil
 }
 
-func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf *config.Network, poolTokenAddress common.Address, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
-	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey, poolTokenAddress common.Address, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -501,7 +501,7 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 				conf.PolyChainID),
 			err)
 	}
-	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -549,12 +549,12 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 	return nil
 }
 
-func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
-	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey,) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
 	}
-	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
 	}
@@ -577,12 +577,12 @@ func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	return nil
 }
 
-func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network) error {
-	privateKey, err := crypto.HexToECDSA(conf.SwapperOwnerPrivateKey)
+func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey,) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
 	}
-	SwapperContract, err := abi.NewISwapper(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
 	}
@@ -605,8 +605,8 @@ func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.
 	return nil
 }
 
-func SwapperPaused(client *ethclient.Client, conf *config.Network) (paused bool, err error) {
-	SwapperContract, err := abi.NewISwapperCaller(conf.SwapperAddress, client)
+func SwapperPaused(client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey) (paused bool, err error) {
+	SwapperContract, err := abi.NewISwapperCaller(conf.Swapper, client)
 	if err != nil {
 		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
 	}
@@ -614,7 +614,7 @@ func SwapperPaused(client *ethclient.Client, conf *config.Network) (paused bool,
 }
 
 func PoolTokenMap(client *ethclient.Client, conf *config.Network, poolId uint64) (poolTokenAddress common.Address, err error) {
-	SwapperContract, err := abi.NewISwapperCaller(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewISwapperCaller(conf.Swapper, client)
 	if err != nil {
 		return ADDRESS_ZERO, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
 	}
@@ -622,7 +622,7 @@ func PoolTokenMap(client *ethclient.Client, conf *config.Network, poolId uint64)
 }
 
 func AssetInPool(client *ethclient.Client, conf *config.Network, poolId uint64, assetHash []byte) (isIn bool, err error) {
-	SwapperContract, err := abi.NewISwapperCaller(conf.SwapperAddress, client)
+	SwapperContract, err := abi.NewISwapperCaller(conf.Swapper, client)
 	if err != nil {
 		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
 	}
@@ -630,15 +630,15 @@ func AssetInPool(client *ethclient.Client, conf *config.Network, poolId uint64, 
 }
 
 // Wrapper
-func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, tokenAddress common.Address) error {
-	if conf.WrapperAddress == ADDRESS_ZERO {
+func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey,tokenAddress common.Address) error {
+	if conf.Wrapper == ADDRESS_ZERO {
 		return fmt.Errorf(
 			fmt.Sprintf(
 				"fail while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
 				conf.PolyChainID),
 		)
 	}
-	privateKey, err := crypto.HexToECDSA(conf.WrapperFeeCollectorPrivateKey)
+	privateKey, err := crypto.HexToECDSA(pkCfg.WrapperFeeCollectorPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -646,7 +646,7 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 				conf.PolyChainID),
 			err)
 	}
-	WrapperContract, err := abi.NewIWrapper(conf.WrapperAddress, client)
+	WrapperContract, err := abi.NewIWrapper(conf.Wrapper, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
