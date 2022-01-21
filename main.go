@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/big"
 	"strconv"
@@ -28,6 +30,7 @@ var force bool
 var all bool
 var poolId uint64
 var chainId uint64
+var pip4 bool
 
 type Msg struct {
 	ChainId uint64
@@ -37,18 +40,39 @@ type Msg struct {
 type Token struct {
 	ChainId uint64
 	Address common.Address
-	NetCfg  *config.Network
-	PkCfg   *config.PrivateKey
+	//LpAddress common.Address
+	NetCfg *config.Network
+	PkCfg  *config.PrivateKey
+}
+
+type LPToken struct {
+	ChainId   uint64
+	Address   common.Address
+	LpAddress common.Address
+	NetCfg    *config.Network
+	PkCfg     *config.PrivateKey
+}
+
+type Tokenlist struct {
+	ChainId   uint64
+	Address   []common.Address
+	LpAddress []common.Address
+	toChainId []uint64
+	toAsset   [][]byte
+	toLPAsset [][]byte
+	NetCfg    *config.Network
+	PkCfg     *config.PrivateKey
 }
 
 func init() {
 	flag.Uint64Var(&poolId, "pool", 0, "pool id if needed")
 	flag.Uint64Var(&chainId, "chain", 0, "chain id if single chainId needed")
-	flag.StringVar(&tokenFile, "token", "./token2.0.json", "token configuration file path")
-	flag.StringVar(&confFile, "conf", "./zionDevConfig.json", "configuration file path")
-	flag.StringVar(&pkconfFile, "pkconf", "./PkConfig.json", "PrivateKey configuration file path")
+	flag.StringVar(&tokenFile, "token", "../ConfigJso/TokenWithLP.json", "token configuration file path")
+	flag.StringVar(&confFile, "conf", "../ConfigJson/zionDevConfig.json", "configuration file path")
+	flag.StringVar(&pkconfFile, "pkconf", "../PKConfig/PkConfig.json", "PrivateKey configuration file path")
 	flag.Float64Var(&multiple, "mul", 1, "multiple of gasPrice, actual_gasPrice = suggested_gasPrice * mul ")
 	flag.BoolVar(&force, "force", false, "need force send override bind or not")
+	flag.BoolVar(&pip4, "pip4", false, "deploy lp or token")
 	flag.BoolVar(&all, "all", false, "shut/restart all in config file")
 	flag.StringVar(&function, "func", "", "choose function to run:\n"+
 		"#### CCM \n"+
@@ -63,6 +87,8 @@ func init() {
 		"  -func checkUnbindToken \n"+
 		"  -func checkBindToken \n"+
 		"  -func bindProxy -mul {1} -conf {./config.json} \n"+
+		"#### LockProxyPip4  \n"+
+		" -func deployToken -mul {1} -conf {./config.json} -token {./token.json} -pip4 {false} [fromChainId]\n"+
 		"#### Swapper \n"+
 		"  -func pauseSwapper \n"+
 		"  -func unpauseSwapper \n"+
@@ -275,7 +301,7 @@ func main() {
 					if i == j {
 						continue
 					}
-					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
+					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].NetCfg.LockProxy, tokens[i].Address, tokens[j].ChainId)
 					if err != nil {
 						err = fmt.Errorf(
 							"fail to shut %s from chain %d =>to=> chain %d , %s",
@@ -390,7 +416,7 @@ func main() {
 					if i == j {
 						continue
 					}
-					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
+					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].NetCfg.LockProxy, tokens[i].Address, tokens[j].ChainId)
 					if err != nil {
 						err = fmt.Errorf(
 							"fail to bind %s from chain %d =>to=> chain %d , %s",
@@ -509,7 +535,7 @@ func main() {
 		if err != nil {
 			log.Fatal("fail to dial %s , %s", fromAsset.NetCfg.Provider, err)
 		}
-		mappedAsset, err := shutTools.TokenMap(client, fromAsset.NetCfg, fromAsset.Address, toAsset.ChainId)
+		mappedAsset, err := shutTools.TokenMap(client, fromAsset.NetCfg, fromAsset.NetCfg.LockProxy, fromAsset.Address, toAsset.ChainId)
 		if err != nil {
 			log.Fatalf(
 				"fail to bind %s from chain %d =>to=> chain %d , %s",
@@ -599,7 +625,7 @@ func main() {
 		if err != nil {
 			log.Fatal("fail to dial %s , %s", fromAsset.NetCfg.Provider, err)
 		}
-		mappedAsset, err := shutTools.TokenMap(client, fromAsset.NetCfg, fromAsset.Address, toChainId)
+		mappedAsset, err := shutTools.TokenMap(client, fromAsset.NetCfg, fromAsset.NetCfg.LockProxy, fromAsset.Address, toChainId)
 		if err != nil {
 			log.Fatalf(
 				"fail to shut %s from chain %d =>to=> chain %d , %s",
@@ -690,7 +716,7 @@ func main() {
 					if i == j {
 						continue
 					}
-					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
+					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].NetCfg.LockProxy, tokens[i].Address, tokens[j].ChainId)
 					if err != nil {
 						log.Errorf(
 							"fail to check %s from chain %d =>to=> chain %d , %s",
@@ -767,7 +793,7 @@ func main() {
 					if i == j {
 						continue
 					}
-					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].Address, tokens[j].ChainId)
+					toAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].NetCfg.LockProxy, tokens[i].Address, tokens[j].ChainId)
 					if err != nil {
 						log.Errorf(
 							"fail to check %s from chain %d =>to=> chain %d , %s",
@@ -1345,7 +1371,7 @@ func main() {
 		}
 		log.Infof("bindProxy: %d =>to=> %d pair has been bind", fromProxy.PolyChainID, toProxy.PolyChainID)
 		log.Info("Done.")
-	case "CheckFeeCollected":
+	case "checkFeeCollected":
 		log.Info("Processing...")
 		args := flag.Args()
 		if all || len(args) == 0 {
@@ -1414,7 +1440,7 @@ func main() {
 				break
 			}
 		}
-	case "ExtractFeeSwapper":
+	case "extractFeeSwapper":
 		log.Info("Processing...")
 		args := flag.Args()
 		if all {
@@ -1482,7 +1508,7 @@ func main() {
 				break
 			}
 		}
-	case "ExtractFeeWrapper":
+	case "extractFeeWrapper":
 		log.Info("Processing...")
 		args := flag.Args()
 		if all {
@@ -1551,6 +1577,417 @@ func main() {
 				break
 			}
 		}
+	case "deployToken":
+		log.Info("Token Depoly...")
+		args := flag.Args()
+		if len(args) != 1 {
+			log.Fatal("Arg num not match")
+		}
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+		}
+		netCfg := conf.GetNetwork(uint64(id))
+		if netCfg == nil {
+			log.Errorf("network with chainId %d not found in config file", id)
+		}
+
+		tokenConfig, err := config.LoadToken(tokenFile)
+		if err != nil {
+			log.Fatal("LoadToken fail", err)
+		}
+		client, err := ethclient.Dial(netCfg.Provider)
+		if err != nil {
+			log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+		}
+
+		pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
+		if pkCfg == nil {
+			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+		}
+		fmt.Println("enter", netCfg.PrivateKeyNo)
+
+		LptokenAddress, err := shutTools.DeployToken(multiple, client, netCfg, pkCfg, tokenConfig, pip4)
+		if err != nil {
+			log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+		}
+
+		log.Info("token deploy success, hash is %s", LptokenAddress)
+
+		token := tokenConfig.GetToken(uint64(id))
+		if pip4 {
+			token.LPAddress = LptokenAddress
+		} else {
+			token.Address = LptokenAddress
+		}
+		res2, err := json.MarshalIndent(tokenConfig, " ", "	")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = ioutil.WriteFile(tokenFile, res2, 0666)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		log.Info("token write success")
+	case "singleBindLPandAsset":
+		log.Info("Processing...")
+		args := flag.Args()
+		tokenConfig, err := config.LoadToken(tokenFile)
+		if err != nil {
+			log.Fatal("LoadToken fail", err)
+		}
+		if len(args) != 2 {
+			log.Fatal("Arg num not match")
+		}
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+		}
+		token := tokenConfig.GetToken(uint64(id))
+		if token == nil {
+			log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+		}
+		address := token.Address
+		lpaddress := token.LPAddress
+		netCfg := conf.GetNetwork(uint64(id))
+		if netCfg == nil {
+			log.Fatalf("network with chainId %d not found in %s", id, confFile)
+		}
+
+		pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
+		if pkCfg == nil {
+			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+		}
+
+		err = pkCfg.PhraseLockProxyPip4PrivateKey()
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		fromAsset := &Token{ChainId: uint64(id), Address: address, NetCfg: netCfg, PkCfg: pkCfg}
+
+		id, err = strconv.Atoi(args[1])
+		if err != nil {
+			log.Errorf("can not parse arg %d : %s , %v", 1, args[1], err)
+		}
+		token = tokenConfig.GetToken(uint64(id))
+		if token == nil {
+			log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+		}
+		address = token.Address
+		tolpaddress := token.LPAddress
+		netCfg = conf.GetNetwork(uint64(id))
+		if netCfg == nil {
+			log.Fatalf("network with chainId %d not found in %s", id, confFile)
+		}
+		toAsset := &Token{uint64(id), address, netCfg, pkCfg}
+
+		log.Infof("Binding %x and %x from %d to %d ...", fromAsset.Address, toAsset.Address, fromAsset.ChainId, toAsset.ChainId)
+		client, err := ethclient.Dial(fromAsset.NetCfg.Provider)
+		if err != nil {
+			log.Fatal("fail to dial %s , %s", fromAsset.NetCfg.Provider, err)
+		}
+		lpmappedAsset, err := shutTools.AssetLPMap(client, fromAsset.NetCfg, fromAsset.Address)
+		if err != nil {
+			log.Fatalf(
+				"fail to bind %s from chain %d =>to=> chain %d , %s",
+				tokenConfig.Name,
+				fromAsset.ChainId,
+				toAsset.ChainId,
+				lpmappedAsset,
+				err)
+		}
+		if len(lpmappedAsset) != 0 && !force && lpmappedAsset == lpaddress {
+			log.Warnf(
+				"token %s from chain %d =>to=> chain %d is already bind, current bind token: %x , ignored",
+				tokenConfig.Name,
+				fromAsset.ChainId,
+				toAsset.ChainId,
+				lpmappedAsset)
+			log.Info("Done.")
+			return
+		} else if len(lpmappedAsset) != 0 && force {
+			log.Warnf(
+				"token %s from chain %d =>to=> chain %d is already bind, current bind token: %x , still force bind",
+				tokenConfig.Name,
+				fromAsset.ChainId,
+				toAsset.ChainId,
+				lpmappedAsset)
+		}
+		mappedAsset, err := shutTools.TokenMap(client, fromAsset.NetCfg, fromAsset.NetCfg.LockProxyPip4, fromAsset.Address, toAsset.ChainId)
+		if err != nil {
+			log.Fatalf(
+				"fail to bind %s from chain %d =>to=> chain %d , %s",
+				tokenConfig.Name,
+				fromAsset.ChainId,
+				toAsset.ChainId,
+				err)
+		}
+		if len(mappedAsset) != 0 && !force {
+			log.Warnf(
+				"token %s from chain %d =>to=> chain %d is already bind, current bind token: %x , ignored",
+				tokenConfig.Name,
+				fromAsset.ChainId,
+				toAsset.ChainId,
+				mappedAsset)
+			log.Info("Done.")
+			return
+		} else if len(mappedAsset) != 0 && force {
+			log.Warnf(
+				"token %s from chain %d =>to=> chain %d is already bind, current bind token: %x , still force bind",
+				tokenConfig.Name,
+				fromAsset.ChainId,
+				toAsset.ChainId,
+				mappedAsset)
+		}
+		err = shutTools.BindLPandAsset(
+			multiple,
+			client,
+			fromAsset.NetCfg,
+			fromAsset.PkCfg,
+			fromAsset.Address,
+			lpaddress,
+			toAsset.ChainId,
+			toAsset.Address.Bytes(),
+			tolpaddress.Bytes())
+		if err != nil {
+			log.Fatalf(
+				"fail to bind %s from chain %d =>to=> chain %d , %s",
+				tokenConfig.Name,
+				fromAsset.ChainId,
+				toAsset.ChainId,
+				err)
+		}
+		log.Infof("%s: %d =>to=> %d pair has been bind", tokenConfig.Name, fromAsset.ChainId, toAsset.ChainId)
+		log.Info("Done.")
+	case "bindLPandAsset":
+		log.Info("Processing...")
+		args := flag.Args()
+		tokenConfig, err := config.LoadToken(tokenFile)
+		if err != nil {
+			log.Fatal("LoadToken fail", err)
+		}
+		if all {
+			args = tokenConfig.GetTokenIds()
+		}
+		sig := make(chan Msg, 10)
+		var tokens []*LPToken
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+			}
+			token := tokenConfig.GetToken(uint64(id))
+			if token == nil {
+				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			}
+			address := token.Address
+			lpaddress := token.LPAddress
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+			}
+			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
+			if pkCfg == nil {
+				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			}
+			err = pkCfg.PhraseLockProxyPip4PrivateKey()
+			if err != nil {
+				log.Fatalf("%v", err)
+			}
+			tokens = append(tokens, &LPToken{uint64(id), address, lpaddress, netCfg, pkCfg})
+		}
+		for i := 0; i < len(tokens); i++ {
+			go func(i int) {
+				log.Infof("Binding %x and %x at  %d ...", tokens[i].Address, tokens[i].LpAddress, tokens[i].ChainId)
+				client, err := ethclient.Dial(tokens[i].NetCfg.Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", tokens[i].NetCfg.Provider, err)
+					sig <- Msg{tokens[i].ChainId, err}
+					return
+				}
+				lpmappedAsset, err := shutTools.AssetLPMap(client, tokens[i].NetCfg, tokens[i].Address)
+				if err != nil {
+					log.Fatalf(
+						"fail to bind %s from chain %d, %s",
+						tokenConfig.Name,
+						tokens[i].ChainId,
+						err)
+				}
+				if len(lpmappedAsset) != 0 && !force && lpmappedAsset == tokens[i].LpAddress {
+					log.Warnf(
+						"lptoken %s from chain %d is already bind, current bind token: %x , ignored",
+						tokenConfig.Name,
+						tokens[i].ChainId,
+						lpmappedAsset)
+					log.Info("Done.")
+				} else if len(lpmappedAsset) != 0 && force {
+					log.Warnf(
+						"lptoken %s from chain %d is already bind, current bind token: %x , ignored",
+						tokenConfig.Name,
+						tokens[i].ChainId,
+						lpmappedAsset)
+				}
+				for j := 0; j < len(tokens); j++ {
+					if i == j {
+						continue
+					}
+					mappedAsset, err := shutTools.TokenMap(client, tokens[i].NetCfg, tokens[i].NetCfg.LockProxyPip4, tokens[i].Address, tokens[j].ChainId)
+					if err != nil {
+						log.Fatalf(
+							"fail to bind %s from chain %d =>to=> chain %d, %s",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							err)
+					}
+					if len(mappedAsset) != 0 && !force {
+						log.Warnf(
+							"token %s from chain %d =>to=> chain %d is already bind, current bind token: %x , ignored",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							mappedAsset)
+						log.Info("Done.")
+						sig <- Msg{tokens[i].ChainId, nil}
+						return
+					} else if len(mappedAsset) != 0 && force {
+						log.Warnf(
+							"token %s from chain %d =>to=> chain %d is already bind, current bind token: %x , still force bind",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							mappedAsset)
+					}
+					err = shutTools.BindLPandAsset(
+						multiple,
+						client,
+						tokens[i].NetCfg,
+						tokens[i].PkCfg,
+						tokens[i].Address,
+						tokens[i].LpAddress,
+						tokens[j].ChainId,
+						tokens[j].Address.Bytes(),
+						tokens[j].LpAddress.Bytes())
+					if err != nil {
+						log.Fatalf(
+							"fail to bind %s from chain %d =>to=> chain %d , %s",
+							tokenConfig.Name,
+							tokens[i].ChainId,
+							tokens[j].ChainId,
+							err)
+					}
+					log.Infof("%s: %d =>to=> %d pair has been bind", tokenConfig.Name, tokens[i].ChainId, tokens[j].ChainId)
+					log.Info("Done.")
+				}
+				sig <- Msg{tokens[i].ChainId, nil}
+			}(i)
+		}
+		cnt := len(tokens)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("%s at chain %d has been bind.", tokenConfig.Name, msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done")
+				break
+			}
+		}
+	case "bindLPandAssetBatch":
+		log.Info("Processing...")
+		args := flag.Args()
+		tokenConfig, err := config.LoadToken(tokenFile)
+		if err != nil {
+			log.Fatal("LoadToken fail", err)
+		}
+		if all {
+			args = tokenConfig.GetTokenIds()
+		}
+		var tokenlist []*Tokenlist
+		sig := make(chan Msg, 10)
+		for i := 0; i < len(args); i++ {
+			var tokens Tokenlist
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+			}
+			token := tokenConfig.GetToken(uint64(id))
+			if token == nil {
+				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			}
+			for j := 0; j < len(args); j++ {
+				if i == j {
+					continue
+				}
+				id_j, err := strconv.Atoi(args[j])
+				if err != nil {
+					log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+				}
+				tokenj := tokenConfig.GetToken(uint64(id_j))
+				if tokenj == nil {
+					log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+				}
+				tokens.Address = append(tokens.Address, token.Address)
+				tokens.LpAddress = append(tokens.LpAddress, token.LPAddress)
+				tokens.toChainId = append(tokens.toChainId, tokenj.PolyChainId)
+				tokens.toAsset = append(tokens.toAsset, tokenj.Address.Bytes())
+				tokens.toLPAsset = append(tokens.toLPAsset, tokenj.LPAddress.Bytes())
+			}
+			tokenlist = append(tokenlist, &Tokenlist{tokens.ChainId, tokens.Address, tokens.LpAddress, tokens.toChainId, tokens.toAsset, tokens.toLPAsset, tokens.NetCfg, tokens.PkCfg})
+		}
+		for i := 0; i <= len(tokenlist); i++ {
+			go func(i int) {
+				log.Infof("Binding %x and %x at  %d ...", tokenlist[i].Address, tokenlist[i].LpAddress, tokenlist[i].ChainId)
+				client, err := ethclient.Dial(tokenlist[i].NetCfg.Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", tokenlist[i].NetCfg.Provider, err)
+					sig <- Msg{tokenlist[i].ChainId, err}
+					return
+				}
+				err = shutTools.BindLPandAeestBatch(
+					multiple,
+					client,
+					tokenlist[i].NetCfg,
+					tokenlist[i].PkCfg,
+					tokenlist[i].Address,
+					tokenlist[i].LpAddress,
+					tokenlist[i].toChainId,
+					tokenlist[i].toAsset,
+					tokenlist[i].toLPAsset,
+				)
+				if err != nil {
+					log.Fatalf(
+						"fail to bind %s at chain %d",
+						tokenConfig.Name,
+						tokenlist[i].ChainId,
+						err)
+				}
+				log.Infof("%s: %d =>to=> %d pair has been bind", tokenConfig.Name, tokenlist[i].ChainId, tokenlist[i].toChainId)
+				log.Info("Done.")
+				sig <- Msg{tokenlist[i].ChainId, nil}
+			}(i)
+		}
+		cnt := len(tokenlist)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("%s at chain %d has been bind.", tokenConfig.Name, msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done")
+				break
+			}
+		}
+	case "Approve":
+		//todo
+		log.Info("Approve Token Depoly...")
+
 	default:
 		log.Fatal("unknown function", function)
 	}

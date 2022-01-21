@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -16,15 +17,16 @@ import (
 var passwordCache string = ""
 
 type Network struct {
-	PolyChainID   uint64
-	Name          string
-	Provider      string
-	Wrapper       common.Address
-	NativeWrapper common.Address
+	PolyChainID               uint64
+	Name                      string
+	Provider                  string
+	Wrapper                   common.Address
+	NativeWrapper             common.Address
 	EthCrossChainManagerProxy common.Address
-	LockProxy     common.Address
-	Swapper       common.Address
-	PrivateKeyNo  uint64
+	LockProxy                 common.Address
+	LockProxyPip4             common.Address
+	Swapper                   common.Address
+	PrivateKeyNo              uint64
 }
 
 type Config struct {
@@ -37,6 +39,8 @@ type PrivateKey struct {
 	CCMPOwnerPrivateKey           string
 	LockProxyOwnerPrivateKey      string
 	LockProxyOwnerKeyStore        string
+	LockProxyPip4OwnerPrivateKey  string
+	LockProxyPip4OwnerKeyStore    string
 	SwapperOwnerPrivateKey        string
 	SwapperOwnerKeyStore          string
 	SwapperFeeCollectorPrivateKey string
@@ -51,15 +55,20 @@ type PkConfig struct {
 	PrivateKeys []PrivateKey
 }
 
-
 type Token struct {
 	PolyChainId uint64
 	Address     common.Address
+	LPAddress   common.Address
 }
 
 type TokenConfig struct {
-	Name   string
-	Tokens []Token
+	Name       string
+	Symbol     string
+	LPName     string
+	LPSymbol   string
+	Decimal    uint8
+	InitSupply *big.Int
+	Tokens     []Token
 }
 
 func LoadConfig(confFile string) (config *Config, err error) {
@@ -147,6 +156,27 @@ func (n *PrivateKey) PhraseLockProxyPrivateKey() (err error) {
 		password = strings.Replace(password, "\n", "", -1)
 		passwordCache = password
 		err = n.LockProxyOwnerFromKeyStore(password)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+	}
+	return nil
+}
+func (n *PrivateKey) PhraseLockProxyPip4PrivateKey() (err error) {
+	_, hasPk2 := crypto.HexToECDSA(n.LockProxyPip4OwnerPrivateKey)
+	hasCache2 := n.LockProxyPip4OwnerFromKeyStore(passwordCache)
+	ok2 := hasPk2 == nil || hasCache2 == nil
+	if !ok2 { // need to recover LockProxy owner privatekey
+		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
+		pass, err := terminal.ReadPassword(0)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+		fmt.Println()
+		password := string(pass)
+		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
+		err = n.LockProxyPip4OwnerFromKeyStore(password)
 		if err != nil {
 			return fmt.Errorf("fail to phrase private key, %v", err)
 		}
@@ -243,6 +273,19 @@ func (n *PrivateKey) LockProxyOwnerFromKeyStore(pswd string) (err error) {
 		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
 	}
 	n.LockProxyOwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key2.PrivateKey))
+	return nil
+}
+
+func (n *PrivateKey) LockProxyPip4OwnerFromKeyStore(pswd string) (err error) {
+	ks2, err := ioutil.ReadFile(n.LockProxyPip4OwnerKeyStore)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	key2, err := keystore.DecryptKey(ks2, pswd)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	n.LockProxyPip4OwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key2.PrivateKey))
 	return nil
 }
 

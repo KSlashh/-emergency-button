@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"math"
 	"math/big"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/KSlashh/emergency-button/abi"
 	"github.com/KSlashh/emergency-button/config"
 	"github.com/KSlashh/emergency-button/log"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -25,7 +25,7 @@ var gasMultipleDecimal int64 = 8
 var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 // CCM
-func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey) error {
+func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.CCMPOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
@@ -53,7 +53,7 @@ func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network
 	return nil
 }
 
-func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey) error {
+func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.CCMPOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
@@ -81,7 +81,7 @@ func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	return nil
 }
 
-func CCMPaused(client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey) (paused bool, err error) {
+func CCMPaused(client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) (paused bool, err error) {
 	CCMPContract, err := abi.NewICCMPCaller(conf.EthCrossChainManagerProxy, client)
 	if err != nil {
 		return false, fmt.Errorf(fmt.Sprintf("fail while request CCM of %s ,", conf.Name), err)
@@ -89,8 +89,8 @@ func CCMPaused(client *ethclient.Client, conf *config.Network,pkCfg *config.Priv
 	return CCMPContract.Paused(nil)
 }
 
-// LockProxy
-func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey,token common.Address, toChainId uint64, toAsset []byte) error {
+///LockProxy
+func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, token common.Address, toChainId uint64, toAsset []byte) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
@@ -160,7 +160,7 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	return nil
 }
 
-func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey,toChainId uint64, toProxy []byte) error {
+func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, toChainId uint64, toProxy []byte) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
@@ -224,8 +224,8 @@ func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.N
 	return nil
 }
 
-func TokenMap(client *ethclient.Client, conf *config.Network, token common.Address, toChainId uint64) (targetToken []byte, err error) {
-	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxy, client)
+func TokenMap(client *ethclient.Client, conf *config.Network, lockproxy common.Address, token common.Address, toChainId uint64) (targetToken []byte, err error) {
+	LockProxyContract, err := abi.NewILockProxyCaller(lockproxy, client)
 	if err != nil {
 		return nil, fmt.Errorf(
 			fmt.Sprintf(
@@ -252,7 +252,7 @@ func ProxyHashMap(client *ethclient.Client, conf *config.Network, toChainId uint
 }
 
 // Swapper
-func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey,tokenAddress common.Address) error {
+func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, tokenAddress common.Address) error {
 	if conf.Swapper == ADDRESS_ZERO {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -311,7 +311,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	return nil
 }
 
-func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey, poolId uint64, poolTokenAddress common.Address) error {
+func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, poolId uint64, poolTokenAddress common.Address) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
@@ -369,7 +369,7 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	return nil
 }
 
-func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey,fromAssetHash []byte, poolId uint64) error {
+func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, fromAssetHash []byte, poolId uint64) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
@@ -433,7 +433,7 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 	return nil
 }
 
-func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
+func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
@@ -491,7 +491,7 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	return nil
 }
 
-func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey, poolTokenAddress common.Address, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
+func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, poolTokenAddress common.Address, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
@@ -549,7 +549,7 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 	return nil
 }
 
-func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey,) error {
+func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
@@ -577,7 +577,7 @@ func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	return nil
 }
 
-func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey,) error {
+func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
@@ -605,7 +605,7 @@ func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.
 	return nil
 }
 
-func SwapperPaused(client *ethclient.Client, conf *config.Network,pkCfg *config.PrivateKey) (paused bool, err error) {
+func SwapperPaused(client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) (paused bool, err error) {
 	SwapperContract, err := abi.NewISwapperCaller(conf.Swapper, client)
 	if err != nil {
 		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
@@ -630,7 +630,7 @@ func AssetInPool(client *ethclient.Client, conf *config.Network, poolId uint64, 
 }
 
 // Wrapper
-func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey,tokenAddress common.Address) error {
+func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, tokenAddress common.Address) error {
 	if conf.Wrapper == ADDRESS_ZERO {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -725,24 +725,15 @@ func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64, 
 }
 
 func WaitTxConfirm(client *ethclient.Client, hash common.Hash) error {
-
-	// cannot receive receipt at ok chain , so skip it
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf("faild to get chainId %v", err)
-	}
-	if chainId.Int64() == ok_id || chainId.Int64() == ok_test_id {
-		time.Sleep(5 * time.Second)
-		log.Info("Can not get receipt of txns at okex, check transaction %s on explorer yourself, make sure it's confirmed.", hash.Hex())
-		return nil
-	}
-
 	ticker := time.NewTicker(time.Second * 1)
 	end := time.Now().Add(60 * time.Second)
 	for now := range ticker.C {
 		_, pending, err := client.TransactionByHash(context.Background(), hash)
 		if err != nil {
-			log.Debug("failed to call TransactionByHash: %v", err)
+			log.Info("failed to call TransactionByHash: %v", err)
+			if now.After(end) {
+				break
+			}
 			continue
 		}
 		if !pending {
