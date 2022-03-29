@@ -7,3 +7,6 @@ keystore/
 tmp/       
 .idea/
 testnetConfig.json     
+*.json
+pip4
+main2.0
