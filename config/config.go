@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -14,344 +12,187 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+var emptyAddress common.Address = common.Address{}
 var passwordCache string = ""
 
+type Key struct {
+	PublicKey  common.Address
+	PrivateKey string
+	KeyStore   string
+}
+
+type KeyConfig struct {
+	Keys []Key
+}
+
 type Network struct {
-	PolyChainID               uint64
-	Name                      string
-	Provider                  string
-	Wrapper                   common.Address
-	NativeWrapper             common.Address
-	EthCrossChainManagerProxy common.Address
-	LockProxy                 common.Address
-	LockProxyPip4             common.Address
-	Swapper                   common.Address
-	PrivateKeyNo              uint64
+	Name              string
+	Provider          string
+	NewCCMPAddress    common.Address
+	BusinessContracts []common.Address
 }
 
 type Config struct {
 	Networks []Network
 }
 
-type PrivateKey struct {
-	PrivateKeyNo                  uint64
-	CCMPOwnerKeyStore             string
-	CCMPOwnerPrivateKey           string
-	LockProxyOwnerPrivateKey      string
-	LockProxyOwnerKeyStore        string
-	LockProxyPip4OwnerPrivateKey  string
-	LockProxyPip4OwnerKeyStore    string
-	SwapperOwnerPrivateKey        string
-	SwapperOwnerKeyStore          string
-	SwapperFeeCollectorPrivateKey string
-	SwapperFeeCollectorKeyStore   string
-	WrapperFeeCollectorPrivateKey string
-	WrapperFeeCollectorKeyStore   string
-	SenderPublicKey               common.Address
-	SenderPrivateKey              string
+// Standardized Config
+type SNetwork struct {
+	Name                 string
+	Provider             string
+	EthCrossChainManager common.Address
 }
 
-type PkConfig struct {
-	PrivateKeys []PrivateKey
+// Standardized Config
+type SConfig struct {
+	Networks []SNetwork
 }
 
-type Token struct {
-	PolyChainId uint64
-	Address     common.Address
-	LPAddress   common.Address
-}
-
-type TokenConfig struct {
-	Name       string
-	Symbol     string
-	LPName     string
-	LPSymbol   string
-	Decimal    uint8
-	InitSupply *big.Int
-	Tokens     []Token
-}
-
-func LoadConfig(confFile string) (config *Config, err error) {
-	jsonBytes, err := ioutil.ReadFile(confFile)
+func MergeConfig(sconfigFile string, configFile string, force bool) (err error) {
+	c, err := LoadConfig(configFile)
 	if err != nil {
-		return
+		return fmt.Errorf("Load config failed, error: %s", err.Error())
+	}
+	sc, err := LoadSConfig(sconfigFile)
+	if err != nil {
+		return fmt.Errorf("Load sconfig failed, error: %s", err.Error())
+	}
+	for i := 0; i < len(c.Networks); i++ {
+		sn := sc.GetNetwork(c.Networks[i].Name)
+		if sn == nil {
+			continue
+		}
+		if force || c.Networks[i].Provider == "" {
+			c.Networks[i].Provider = sn.Provider
+		}
+		if force || c.Networks[i].NewCCMPAddress == emptyAddress {
+			c.Networks[i].NewCCMPAddress = sn.EthCrossChainManager
+		}
+	}
+	return c.WriteConfig(configFile)
+}
+
+func LoadKeyConfig(file string) (kc *KeyConfig, err error) {
+	jsonBytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
 	}
 
-	config = &Config{}
-	err = json.Unmarshal(jsonBytes, config)
-	return
+	kc = &KeyConfig{}
+	err = json.Unmarshal(jsonBytes, kc)
+	if err != nil {
+		return nil, err
+	}
+	err = kc.PhraseKeys()
+	if err != nil {
+		return nil, err
+	}
+	return kc, nil
 }
 
-func (c *Config) GetNetwork(index uint64) (netConfig *Network) {
+func LoadConfig(file string) (c *Config, err error) {
+	jsonBytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	c = &Config{}
+	err = json.Unmarshal(jsonBytes, c)
+	return c, nil
+}
+
+func LoadSConfig(file string) (sc *SConfig, err error) {
+	jsonBytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	sc = &SConfig{}
+	err = json.Unmarshal(jsonBytes, sc)
+	return sc, nil
+}
+
+func (k *Key) PhraseKey() (err error) {
+	_, hasPk := crypto.HexToECDSA(k.PrivateKey)
+	hasCache := k.KeyFromKeyStore(passwordCache)
+	ok := hasPk == nil || hasCache == nil
+	if !ok { // need to recover WrapperFeeCollector privatekey
+		fmt.Printf("Please type in password of %s: ", k.KeyStore)
+		pass, err := terminal.ReadPassword(0)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+		fmt.Println()
+		password := string(pass)
+		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
+		err = k.KeyFromKeyStore(password)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+	}
+	key, err := crypto.HexToECDSA(k.PrivateKey)
+	if err != nil {
+		return err
+	}
+	k.PublicKey = crypto.PubkeyToAddress(key.PublicKey)
+	return nil
+}
+
+func (k *Key) KeyFromKeyStore(pswd string) (err error) {
+	ks, err := ioutil.ReadFile(k.KeyStore)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	key1, err := keystore.DecryptKey(ks, pswd)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	k.PrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key1.PrivateKey))
+	return nil
+}
+
+func (kc *KeyConfig) PhraseKeys() (err error) {
+	for i := 0; i < len(kc.Keys); i++ {
+		err = kc.Keys[i].PhraseKey()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (kc *KeyConfig) GetKey(PublicKey common.Address) (key *Key) {
+	for i := 0; i < len(kc.Keys); i++ {
+		if kc.Keys[i].PublicKey == PublicKey {
+			return &kc.Keys[i]
+		}
+	}
+	return nil
+}
+
+func (sc *SConfig) GetNetwork(name string) (network *SNetwork) {
+	for i := 0; i < len(sc.Networks); i++ {
+		if sc.Networks[i].Name == name {
+			return &sc.Networks[i]
+		}
+	}
+	return nil
+}
+
+func (c *Config) GetNetwork(name string) (network *Network) {
 	for i := 0; i < len(c.Networks); i++ {
-		if c.Networks[i].PolyChainID == index {
+		if c.Networks[i].Name == name {
 			return &c.Networks[i]
 		}
 	}
 	return nil
 }
 
-func (c *Config) GetNetworkIds() []string {
-	var res []string
-	for i := 0; i < len(c.Networks); i++ {
-		res = append(res, strconv.Itoa(int(c.Networks[i].PolyChainID)))
-	}
-	return res
-}
-
-func LoadPrivateKeyConfig(confFile string) (PKconfig *PkConfig, err error) {
-	jsonBytes, err := ioutil.ReadFile(confFile)
+func (c *Config) WriteConfig(file string) (err error) {
+	b, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
-		return
+		return err
 	}
-
-	PKconfig = &PkConfig{}
-	err = json.Unmarshal(jsonBytes, PKconfig)
-	return
-}
-
-func (n *PkConfig) GetSenderPrivateKey(index uint64) (pkConfig *PrivateKey) {
-	for i := 0; i < len(n.PrivateKeys); i++ {
-		if n.PrivateKeys[i].PrivateKeyNo == index {
-			return &n.PrivateKeys[i]
-		}
-	}
-	return nil
-}
-
-func (n *PrivateKey) PhraseCCMPrivateKey() (err error) {
-	_, hasPk1 := crypto.HexToECDSA(n.CCMPOwnerPrivateKey)
-	hasCache1 := n.CCMPOwnerFromKeyStore(passwordCache)
-	ok1 := hasPk1 == nil || hasCache1 == nil
-	if !ok1 {
-		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
-		pass, err := terminal.ReadPassword(0)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		fmt.Println()
-		password := string(pass)
-		password = strings.Replace(password, "\n", "", -1)
-		passwordCache = password
-		err = n.CCMPOwnerFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-	}
-	return nil
-}
-
-func (n *PrivateKey) PhraseLockProxyPrivateKey() (err error) {
-	_, hasPk2 := crypto.HexToECDSA(n.LockProxyOwnerPrivateKey)
-	hasCache2 := n.LockProxyOwnerFromKeyStore(passwordCache)
-	ok2 := hasPk2 == nil || hasCache2 == nil
-	if !ok2 { // need to recover LockProxy owner privatekey
-		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
-		pass, err := terminal.ReadPassword(0)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		fmt.Println()
-		password := string(pass)
-		password = strings.Replace(password, "\n", "", -1)
-		passwordCache = password
-		err = n.LockProxyOwnerFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-	}
-	return nil
-}
-func (n *PrivateKey) PhraseLockProxyPip4PrivateKey() (err error) {
-	_, hasPk2 := crypto.HexToECDSA(n.LockProxyPip4OwnerPrivateKey)
-	hasCache2 := n.LockProxyPip4OwnerFromKeyStore(passwordCache)
-	ok2 := hasPk2 == nil || hasCache2 == nil
-	if !ok2 { // need to recover LockProxy owner privatekey
-		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
-		pass, err := terminal.ReadPassword(0)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		fmt.Println()
-		password := string(pass)
-		password = strings.Replace(password, "\n", "", -1)
-		passwordCache = password
-		err = n.LockProxyPip4OwnerFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-	}
-	return nil
-}
-
-func (n *PrivateKey) PhraseSwapperPrivateKey() (err error) {
-	_, hasPk3 := crypto.HexToECDSA(n.SwapperOwnerPrivateKey)
-	hasCache3 := n.SwapperOwnerFromKeyStore(passwordCache)
-	ok := hasPk3 == nil || hasCache3 == nil
-	if !ok { // need to recover Swapper owner privatekey
-		fmt.Printf("Please type in password of %s: ", n.SwapperOwnerKeyStore)
-		pass, err := terminal.ReadPassword(0)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		fmt.Println()
-		password := string(pass)
-		password = strings.Replace(password, "\n", "", -1)
-		passwordCache = password
-		err = n.SwapperOwnerFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-	}
-	return nil
-}
-
-func (n *PrivateKey) PhraseSwapperFeeCollectorPrivateKey() (err error) {
-	_, hasPk4 := crypto.HexToECDSA(n.SwapperFeeCollectorPrivateKey)
-	hasCache4 := n.SwapperFeeCollectorFromKeyStore(passwordCache)
-	ok := hasPk4 == nil || hasCache4 == nil
-	if !ok { // need to recover SwapperFeeCollector privatekey
-		fmt.Printf("Please type in password of %s: ", n.SwapperFeeCollectorKeyStore)
-		pass, err := terminal.ReadPassword(0)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		fmt.Println()
-		password := string(pass)
-		password = strings.Replace(password, "\n", "", -1)
-		passwordCache = password
-		err = n.SwapperFeeCollectorFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-	}
-	return nil
-}
-
-func (n *PrivateKey) PhraseWrapperFeeCollectorPrivateKey() (err error) {
-	_, hasPk5 := crypto.HexToECDSA(n.WrapperFeeCollectorPrivateKey)
-	hasCache5 := n.WrapperFeeCollectorFromKeyStore(passwordCache)
-	ok := hasPk5 == nil || hasCache5 == nil
-	if !ok { // need to recover WrapperFeeCollector privatekey
-		fmt.Printf("Please type in password of %s: ", n.WrapperFeeCollectorKeyStore)
-		pass, err := terminal.ReadPassword(0)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-		fmt.Println()
-		password := string(pass)
-		password = strings.Replace(password, "\n", "", -1)
-		passwordCache = password
-		err = n.WrapperFeeCollectorFromKeyStore(password)
-		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
-		}
-	}
-	return nil
-}
-
-func (n *PrivateKey) CCMPOwnerFromKeyStore(pswd string) (err error) {
-	ks1, err := ioutil.ReadFile(n.CCMPOwnerKeyStore)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	key1, err := keystore.DecryptKey(ks1, pswd)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	n.CCMPOwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key1.PrivateKey))
-	return nil
-}
-
-func (n *PrivateKey) LockProxyOwnerFromKeyStore(pswd string) (err error) {
-	ks2, err := ioutil.ReadFile(n.LockProxyOwnerKeyStore)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	key2, err := keystore.DecryptKey(ks2, pswd)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	n.LockProxyOwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key2.PrivateKey))
-	return nil
-}
-
-func (n *PrivateKey) LockProxyPip4OwnerFromKeyStore(pswd string) (err error) {
-	ks2, err := ioutil.ReadFile(n.LockProxyPip4OwnerKeyStore)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	key2, err := keystore.DecryptKey(ks2, pswd)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	n.LockProxyPip4OwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key2.PrivateKey))
-	return nil
-}
-
-func (n *PrivateKey) SwapperOwnerFromKeyStore(pswd string) (err error) {
-	ks3, err := ioutil.ReadFile(n.SwapperOwnerKeyStore)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	key3, err := keystore.DecryptKey(ks3, pswd)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	n.SwapperOwnerPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key3.PrivateKey))
-	return nil
-}
-
-func (n *PrivateKey) SwapperFeeCollectorFromKeyStore(pswd string) (err error) {
-	ks4, err := ioutil.ReadFile(n.SwapperFeeCollectorKeyStore)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	key4, err := keystore.DecryptKey(ks4, pswd)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	n.SwapperFeeCollectorPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key4.PrivateKey))
-	return nil
-}
-
-func (n *PrivateKey) WrapperFeeCollectorFromKeyStore(pswd string) (err error) {
-	ks5, err := ioutil.ReadFile(n.WrapperFeeCollectorKeyStore)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	key5, err := keystore.DecryptKey(ks5, pswd)
-	if err != nil {
-		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
-	}
-	n.WrapperFeeCollectorPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key5.PrivateKey))
-	return nil
-}
-
-func LoadToken(tokenFile string) (tokens *TokenConfig, err error) {
-	jsonBytes, err := ioutil.ReadFile(tokenFile)
-	if err != nil {
-		return
-	}
-
-	tokens = &TokenConfig{}
-	err = json.Unmarshal(jsonBytes, tokens)
-	return
-}
-
-func (c *TokenConfig) GetToken(index uint64) (netConfig *Token) {
-	for i := 0; i < len(c.Tokens); i++ {
-		if c.Tokens[i].PolyChainId == index {
-			return &c.Tokens[i]
-		}
-	}
-	return nil
-}
-
-func (c *TokenConfig) GetTokenIds() []string {
-	var res []string
-	for i := 0; i < len(c.Tokens); i++ {
-		res = append(res, strconv.Itoa(int(c.Tokens[i].PolyChainId)))
-	}
-	return res
+	return ioutil.WriteFile(file, b, 0777)
 }

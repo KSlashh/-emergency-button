@@ -1,0 +1,58 @@
+## config.js
+{
+	"Networks": [
+		{
+			"Name": "bsc",
+			"BusinessContracts": [
+				"0x5e4027a4797d72c92f5c340a1a738e8b092ba758",
+				"0x4e13cafe8f839c38a695b041864c5b62cd0fe1a0"
+			]
+		},
+		{
+			"Name": "heco",
+			"BusinessContracts": [
+				"0x104b18f23b9d95f5ce89eee414a604ecbfa90113",
+				"0x41d18caf9a94cbad900ea2a931374b7f412f8afb"
+			]
+		}
+	]
+}
+
+## keyConfig.js
+{
+	"Keys": [
+		{
+			"KeyStore": "./keystore.json"
+		},
+		{
+			"PrivateKey": "1234567890000000000000000000000"
+		}
+	]
+}
+
+## sconfig.js
+// genrated by hardhat deploy script
+{
+	"Networks": [
+		{
+			"Name": "bsc",
+			"PolyChainID": 6,
+			"Provider": "https://data-seed-prebsc-1-s1.binance.org:8545/",
+			"Deployer": "0x7FB1484882e4A3A7a4e31f0eb33bf3dD3d95f797",
+			"EthCrossChainData": "0x492Fa2DB264DA2472C2C42B8Af7ce2cCE17F5d9a",
+			"CallerFactory": "0x6A1004B8D0A532160D7ac289109D911e2e22211B",
+			"EthCrossChainManagerImplementation": "0x17aadDa0A47d07323D9BEF81c7a0c0756eaC3341",
+			"EthCrossChainManager": "0xfAFe4Fbf0Bf8509370473b05a6E082e29F03b280"
+		},
+		{
+			"Name": "heco",
+			"PolyChainID": 7,
+			"Provider": "https://http-testnet.hecochain.com",
+			"Deployer": "0x7FB1484882e4A3A7a4e31f0eb33bf3dD3d95f797",
+			"EthCrossChainData": "0x14eF469df57090d343dB9C90096aAAb435855175",
+			"CallerFactory": "0x1cC373c88969371C74B1F9D236e68B6906b5Da61",
+			"EthCrossChainManagerImplementation": "0x83cD9fa1ecf50AffC2CF5659b07825133C07fc6d",
+			"EthCrossChainManager": "0x8FEcF92124c83F88603575f0545F3C4B6255426e"
+		}
+	]
+}
