@@ -4,15 +4,21 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"math"
 	"math/big"
+	"strings"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/KSlashh/emergency-button/abi"
 	"github.com/KSlashh/emergency-button/config"
 	"github.com/KSlashh/emergency-button/log"
+
+	"github.com/ethereum/go-ethereum"
+	eabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -161,6 +167,64 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 }
 
 func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, toChainId uint64, toProxy []byte) error {
+
+	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+
+	lockProxyAbi, err := eabi.JSON(strings.NewReader(abi.ILockProxyABI))
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+
+	data, err := lockProxyAbi.Pack("bindProxyHash", toChainId, toProxy)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+
+	gasLimit := auth.GasLimit
+	if gasLimit == 0 {
+		msg := ethereum.CallMsg{From: auth.From, To: &conf.LockProxy, GasPrice: auth.GasPrice, Value: auth.Value, Data: data}
+		gasLimit, err = client.EstimateGas(context.Background(), msg)
+		if err != nil {
+			return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		}
+	}
+
+	tx := types.NewTransaction(auth.Nonce.Uint64(), conf.LockProxy, auth.Value, gasLimit, auth.GasPrice, data)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+
+	signer := types.LatestSignerForChainID(chainId)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+
+	tx, err = types.SignTx(tx, signer, privateKey)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+
+	err = client.SendTransaction(context.Background(), tx)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	}
+	return WaitTxConfirm(client, tx.Hash())
+}
+
+func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, toChainId uint64, toProxy []byte) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
