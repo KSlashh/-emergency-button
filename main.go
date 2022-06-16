@@ -99,6 +99,7 @@ func init() {
 		"  -func ExtractFeeSwapper\n"+
 		"#### Wrapper \n"+
 		"  -func ExtractFeeWrapper\n"+
+		"  -func ExtractFeeWrapperO3\n"+
 		"  {}contains default value")
 	flag.Parse()
 }
@@ -1441,24 +1442,36 @@ func main() {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
 				}
+				bo, err := client.BalanceAt(context.Background(), netCfg.WrapperO3, nil)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
 				if netCfg.Swapper == ADDRESS_ZERO {
 					bs = big.NewInt(0)
 				}
 				if netCfg.Wrapper == ADDRESS_ZERO {
 					bw = big.NewInt(0)
 				}
+				if netCfg.WrapperO3 == ADDRESS_ZERO {
+					bo = big.NewInt(0)
+				}
 				balanceSwapper := big.NewFloat(0)
 				balanceWrapper := big.NewFloat(0)
+				balanceWrapperO3 := big.NewFloat(0)
 				balanceSwapper.SetString(bs.String())
 				balanceWrapper.SetString(bw.String())
+				balanceWrapperO3.SetString(bo.String())
 				balanceSwapper.Quo(balanceSwapper, big.NewFloat(math.Pow(10, 18)))
 				balanceWrapper.Quo(balanceWrapper, big.NewFloat(math.Pow(10, 18)))
+				balanceWrapperO3.Quo(balanceWrapper, big.NewFloat(math.Pow(10, 18)))
 				if err != nil {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
 				}
 				log.Infof("Balance of swapper (nativeToken) at %s is %f ", netCfg.Name, balanceSwapper)
 				log.Infof("Balance of wrapper (nativeToken) at %s is %f ", netCfg.Name, balanceWrapper)
+				log.Infof("Balance of wrapperO3 (nativeToken) at %s is %f ", netCfg.Name, balanceWrapperO3)
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1
@@ -1565,8 +1578,76 @@ func main() {
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
+			err = pkCfg.PhraseSwapperFeeCollectorPrivateKey()
+			if err != nil {
+				log.Errorf("%v", err)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			go func() {
+				log.Infof("Extract fee from swapper at %s ...", netCfg.Name)
 
-			err = pkCfg.PhraseWrapperFeeCollectorPrivateKey()
+				balance, err := client.BalanceAt(context.Background(), netCfg.Swapper, nil)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				zeroBalance := balance.Int64() == 0
+				if zeroBalance && !force {
+					log.Warnf("Swapper at chain %d do not have balance, ignored", netCfg.PolyChainID)
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				} else if zeroBalance && force {
+					log.Warnf("Swapper at chain %d do not have balance, still force extractFee", netCfg.PolyChainID)
+				}
+
+				err = shutTools.ExtractFeeSwapper(multiple, client, netCfg, pkCfg, ADDRESS_ZERO)
+				sig <- Msg{netCfg.PolyChainID, err}
+			}()
+			cnt += 1
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("Fee has been taken from swapper at chain %d .", msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "extractFeeWrapperO3":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		cnt := 0
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+
+			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
+			if pkCfg == nil {
+				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			}
+
+			err = pkCfg.PhraseWrapperO3FeeCollectorPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -1579,7 +1660,7 @@ func main() {
 			go func() {
 				log.Infof("Extract fee from wrapper at %s ...", netCfg.Name)
 
-				balance, err := client.BalanceAt(context.Background(), netCfg.Wrapper, nil)
+				balance, err := client.BalanceAt(context.Background(), netCfg.WrapperO3, nil)
 				if err != nil {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
@@ -1593,7 +1674,7 @@ func main() {
 					log.Warnf("Wrapper at chain %d do not have balance, still force extractFee", netCfg.PolyChainID)
 				}
 
-				err = shutTools.ExtractFeeWrapper(multiple, client, netCfg, pkCfg, ADDRESS_ZERO)
+				err = shutTools.ExtractFeeWrapperO3(multiple, client, netCfg, pkCfg)
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1

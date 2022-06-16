@@ -21,6 +21,7 @@ type Network struct {
 	Name                      string
 	Provider                  string
 	Wrapper                   common.Address
+	WrapperO3                 common.Address
 	NativeWrapper             common.Address
 	EthCrossChainManagerProxy common.Address
 	LockProxy                 common.Address
@@ -34,21 +35,23 @@ type Config struct {
 }
 
 type PrivateKey struct {
-	PrivateKeyNo                  uint64
-	CCMPOwnerKeyStore             string
-	CCMPOwnerPrivateKey           string
-	LockProxyOwnerPrivateKey      string
-	LockProxyOwnerKeyStore        string
-	LockProxyPip4OwnerPrivateKey  string
-	LockProxyPip4OwnerKeyStore    string
-	SwapperOwnerPrivateKey        string
-	SwapperOwnerKeyStore          string
-	SwapperFeeCollectorPrivateKey string
-	SwapperFeeCollectorKeyStore   string
-	WrapperFeeCollectorPrivateKey string
-	WrapperFeeCollectorKeyStore   string
-	SenderPublicKey               common.Address
-	SenderPrivateKey              string
+	PrivateKeyNo                    uint64
+	CCMPOwnerKeyStore               string
+	CCMPOwnerPrivateKey             string
+	LockProxyOwnerPrivateKey        string
+	LockProxyOwnerKeyStore          string
+	LockProxyPip4OwnerPrivateKey    string
+	LockProxyPip4OwnerKeyStore      string
+	SwapperOwnerPrivateKey          string
+	SwapperOwnerKeyStore            string
+	SwapperFeeCollectorPrivateKey   string
+	SwapperFeeCollectorKeyStore     string
+	WrapperFeeCollectorPrivateKey   string
+	WrapperFeeCollectorKeyStore     string
+	WrapperO3FeeCollectorPrivateKey string
+	WrapperO3FeeCollectorKeyStore   string
+	SenderPublicKey                 common.Address
+	SenderPrivateKey                string
 }
 
 type PkConfig struct {
@@ -250,6 +253,28 @@ func (n *PrivateKey) PhraseWrapperFeeCollectorPrivateKey() (err error) {
 	return nil
 }
 
+func (n *PrivateKey) PhraseWrapperO3FeeCollectorPrivateKey() (err error) {
+	_, hasPk6 := crypto.HexToECDSA(n.WrapperO3FeeCollectorPrivateKey)
+	hasCache6 := n.WrapperO3FeeCollectorFromKeyStore(passwordCache)
+	ok := hasPk6 == nil || hasCache6 == nil
+	if !ok { // need to recover WrapperFeeCollector privatekey
+		fmt.Printf("Please type in password of %s: ", n.WrapperO3FeeCollectorKeyStore)
+		pass, err := terminal.ReadPassword(0)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+		fmt.Println()
+		password := string(pass)
+		password = strings.Replace(password, "\n", "", -1)
+		passwordCache = password
+		err = n.WrapperO3FeeCollectorFromKeyStore(password)
+		if err != nil {
+			return fmt.Errorf("fail to phrase private key, %v", err)
+		}
+	}
+	return nil
+}
+
 func (n *PrivateKey) CCMPOwnerFromKeyStore(pswd string) (err error) {
 	ks1, err := ioutil.ReadFile(n.CCMPOwnerKeyStore)
 	if err != nil {
@@ -325,6 +350,19 @@ func (n *PrivateKey) WrapperFeeCollectorFromKeyStore(pswd string) (err error) {
 		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
 	}
 	n.WrapperFeeCollectorPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key5.PrivateKey))
+	return nil
+}
+
+func (n *PrivateKey) WrapperO3FeeCollectorFromKeyStore(pswd string) (err error) {
+	ks6, err := ioutil.ReadFile(n.WrapperO3FeeCollectorKeyStore)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	key6, err := keystore.DecryptKey(ks6, pswd)
+	if err != nil {
+		return fmt.Errorf("fail to recover private key from keystore file, %v", err)
+	}
+	n.WrapperO3FeeCollectorPrivateKey = fmt.Sprintf("%x", crypto.FromECDSA(key6.PrivateKey))
 	return nil
 }
 

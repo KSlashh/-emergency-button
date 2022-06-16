@@ -753,6 +753,65 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	return nil
 }
 
+func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
+	if conf.Wrapper == ADDRESS_ZERO {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
+				conf.PolyChainID),
+		)
+	}
+	privateKey, err := crypto.HexToECDSA(pkCfg.WrapperFeeCollectorPrivateKey)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at WrapperO3 at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	WrapperContract, err := abi.NewWrapperO3(conf.Wrapper, client)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at WrapperO3 at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at WrapperO3 at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at WrapperO3 at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	tx, err := WrapperContract.ExtractFee(auth)
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at WrapperO3 at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	err = WaitTxConfirm(client, tx.Hash())
+	if err != nil {
+		return fmt.Errorf(
+			fmt.Sprintf(
+				"fail while extract fee at WrapperO3 at chain %d, ",
+				conf.PolyChainID),
+			err)
+	}
+	return nil
+}
+
 // Basic
 func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64, gasMultiple float64, chainId *big.Int) (*bind.TransactOpts, error) {
 	authAddress := crypto.PubkeyToAddress(*key.Public().(*ecdsa.PublicKey))

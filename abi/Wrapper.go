@@ -213,4 +213,3 @@ func (_IWrapper *IWrapperSession) ExtractFee(token common.Address) (*types.Trans
 func (_IWrapper *IWrapperTransactorSession) ExtractFee(token common.Address) (*types.Transaction, error) {
 	return _IWrapper.Contract.ExtractFee(&_IWrapper.TransactOpts, token)
 }
-
