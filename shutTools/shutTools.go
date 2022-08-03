@@ -4,16 +4,11 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"math"
 	"math/big"
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/KSlashh/emergency-button/abi"
-	"github.com/KSlashh/emergency-button/config"
-	"github.com/KSlashh/emergency-button/log"
 
 	"github.com/ethereum/go-ethereum"
 	eabi "github.com/ethereum/go-ethereum/accounts/abi"
@@ -23,839 +18,135 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-var ok_id int64 = 66
-var ok_test_id int64 = 65
+var MultipleDecimal uint64 = 100
 
-var DefaultGasLimit uint64 = 0 // get gas limit via EstimateGas
-var gasMultipleDecimal int64 = 8
+var DefaultGasLimitMultiple uint64 = 300
+var DefaultGasPriceMultiple int64 = 200
+
 var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
-// CCM
-func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.CCMPOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-	}
-	CCMPContract, err := abi.NewICCMP(conf.EthCrossChainManagerProxy, client)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-	}
-	tx, err := CCMPContract.PauseEthCrossChainManager(auth)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
-	}
-	return nil
+var GasPriceList []int64 = []int64{5, 10, 20, 50, 100, 200, 500, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000, 10000}
+var Gwei int64 = 1000000000
+
+type TransactionWithSig struct {
+	Transaction types.Transaction
+	Sig         []byte
 }
 
-func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.CCMPOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-	}
-	CCMPContract, err := abi.NewICCMP(conf.EthCrossChainManagerProxy, client)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-	}
-	tx, err := CCMPContract.UnpauseEthCrossChainManager(auth)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while restart CCM of %s ,", conf.Name), err)
-	}
-	return nil
+type TransactionList struct {
+	PolyChainID uint64
+	TxList      []TransactionWithSig
 }
 
-func CCMPaused(client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) (paused bool, err error) {
-	CCMPContract, err := abi.NewICCMPCaller(conf.EthCrossChainManagerProxy, client)
-	if err != nil {
-		return false, fmt.Errorf(fmt.Sprintf("fail while request CCM of %s ,", conf.Name), err)
-	}
-	return CCMPContract.Paused(nil)
+type TxConfig struct {
+	Txns []TransactionList
 }
 
-///LockProxy
-func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, token common.Address, toChainId uint64, toAsset []byte) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
-				token.Hex(),
-				conf.PolyChainID,
-				toAsset,
-				toChainId),
-			err)
-	}
-	LockProxyContract, err := abi.NewILockProxy(conf.LockProxy, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
-				token.Hex(),
-				conf.PolyChainID,
-				toAsset,
-				toChainId),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
-				token.Hex(),
-				conf.PolyChainID,
-				toAsset,
-				toChainId),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
-				token.Hex(),
-				conf.PolyChainID,
-				toAsset,
-				toChainId),
-			err)
-	}
-	tx, err := LockProxyContract.BindAssetHash(auth, token, toChainId, toAsset)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
-				token.Hex(),
-				conf.PolyChainID,
-				toAsset,
-				toChainId),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
-				token.Hex(),
-				conf.PolyChainID,
-				toAsset,
-				toChainId),
-			err)
-	}
-	return nil
-}
-
-func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, toChainId uint64, toProxy []byte) error {
-
-	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
-	}
-
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
-	}
-
-	lockProxyAbi, err := eabi.JSON(strings.NewReader(abi.ILockProxyABI))
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
-	}
-
-	data, err := lockProxyAbi.Pack("bindProxyHash", toChainId, toProxy)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
-	}
-
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
-	}
-
-	gasLimit := auth.GasLimit
-	if gasLimit == 0 {
-		msg := ethereum.CallMsg{From: auth.From, To: &conf.LockProxy, GasPrice: auth.GasPrice, Value: auth.Value, Data: data}
-		gasLimit, err = client.EstimateGas(context.Background(), msg)
-		if err != nil {
-			return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+func (c *TxConfig) GetTxns(index uint64) (txList *TransactionList) {
+	for i := 0; i < len(c.Txns); i++ {
+		if c.Txns[i].PolyChainID == index {
+			return &c.Txns[i]
 		}
 	}
+	return nil
+}
 
-	tx := types.NewTransaction(auth.Nonce.Uint64(), conf.LockProxy, auth.Value, gasLimit, auth.GasPrice, data)
+// CCM
+func PreparePauseTxns(client *ethclient.Client, ccmp common.Address, privateKey *ecdsa.PrivateKey) (txns []TransactionWithSig, err error) {
+	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return nil, fmt.Errorf("fail to load abi: %s", err.Error())
 	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get chainId: %s", err.Error())
+	}
+	from := crypto.PubkeyToAddress(privateKey.PublicKey)
+	to := ccmp
+	nonce, err := client.PendingNonceAt(context.Background(), from)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get nonce: %s", err.Error())
+	}
+	value := big.NewInt(0)
+	data, err := CCMPABI.Pack("pauseEthCrossChainManager")
+	if err != nil {
+		return nil, fmt.Errorf("fail to pack data: %s", err.Error())
+	}
+	msg := ethereum.CallMsg{From: from, To: &to, Value: value, Data: data}
+	gasLimit, err := client.EstimateGas(context.Background(), msg)
+	if err != nil {
+		return nil, fmt.Errorf("fail to estimate gas: %s", err.Error())
+	}
+	gasLimit = gasLimit * DefaultGasLimitMultiple / MultipleDecimal
+	for i := 0; i < len(GasPriceList); i++ {
+		gasPrice := big.NewInt(GasPriceList[i] * Gwei)
+		tx := types.NewTransaction(nonce, to, value, gasLimit, gasPrice, data)
+		signer := types.LatestSignerForChainID(chainId)
+		h := signer.Hash(tx)
+		sig, err := crypto.Sign(h[:], privateKey)
+		if err != nil {
+			return nil, fmt.Errorf("fail to sign: %s", err.Error())
+		}
+		txns = append(txns, TransactionWithSig{*tx, sig})
+	}
+	return txns, nil
+}
 
+func ExecutePauseTxns(client *ethclient.Client, txns []TransactionWithSig) error {
+	suggestGasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return fmt.Errorf("fail to get suggest gasPrice: %s", err.Error())
+	}
+	suggestGasPrice.Mul(suggestGasPrice, big.NewInt(DefaultGasPriceMultiple))
+	suggestGasPrice.Div(suggestGasPrice, big.NewInt(int64(MultipleDecimal)))
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf("fail to get chainId: %s", err.Error())
+	}
 	signer := types.LatestSignerForChainID(chainId)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+	for i := 0; i < len(txns); i++ {
+		tx := &txns[i].Transaction
+		sig := txns[i].Sig
+		tx, err = tx.WithSignature(signer, sig)
+		if err != nil {
+			return fmt.Errorf("fail to generate tx with signature: %s", err.Error())
+		}
+		if tx.GasPrice().Int64() < suggestGasPrice.Int64() {
+			continue
+		}
+		err = client.SendTransaction(context.Background(), tx)
+		if err != nil {
+			return fmt.Errorf("fail to send transaction: %s", err.Error())
+		}
+		return WaitTxConfirm(client, tx.Hash(), "120s")
 	}
-
-	tx, err = types.SignTx(tx, signer, privateKey)
+	tx := &txns[len(txns)-1].Transaction
+	sig := txns[len(txns)-1].Sig
+	fmt.Printf("SuggestGasPrice: %s too high! Try to send tx with highest gasPrice: %s", suggestGasPrice.String(), tx.GasPrice().String())
+	tx, err = tx.WithSignature(signer, sig)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf("fail to generate tx with signature: %s", err.Error())
 	}
-
 	err = client.SendTransaction(context.Background(), tx)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf("fail to send transaction: %s", err.Error())
 	}
-	return WaitTxConfirm(client, tx.Hash())
-}
-
-func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, toChainId uint64, toProxy []byte) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
-				conf.PolyChainID,
-				toProxy,
-				toChainId),
-			err)
-	}
-	LockProxyContract, err := abi.NewILockProxy(conf.LockProxy, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
-				conf.PolyChainID,
-				toProxy,
-				toChainId),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
-				conf.PolyChainID,
-				toProxy,
-				toChainId),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
-				conf.PolyChainID,
-				toProxy,
-				toChainId),
-			err)
-	}
-	tx, err := LockProxyContract.BindProxyHash(auth, toChainId, toProxy)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
-				conf.PolyChainID,
-				toProxy,
-				toChainId),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
-				conf.PolyChainID,
-				toProxy,
-				toChainId),
-			err)
-	}
-	return nil
-}
-
-func TokenMap(client *ethclient.Client, conf *config.Network, lockproxy common.Address, token common.Address, toChainId uint64) (targetToken []byte, err error) {
-	LockProxyContract, err := abi.NewILockProxyCaller(lockproxy, client)
-	if err != nil {
-		return nil, fmt.Errorf(
-			fmt.Sprintf(
-				"fail while request Token %s from chain %d =>to=> asset at chain %d,",
-				token.Hex(),
-				conf.PolyChainID,
-				toChainId),
-			err)
-	}
-	return LockProxyContract.AssetHashMap(nil, token, toChainId)
-}
-
-func ProxyHashMap(client *ethclient.Client, conf *config.Network, toChainId uint64) (targetProxy []byte, err error) {
-	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxy, client)
-	if err != nil {
-		return nil, fmt.Errorf(
-			fmt.Sprintf(
-				"fail while request Proxy from chain %d =>to=> asset at chain %d,",
-				conf.PolyChainID,
-				toChainId),
-			err)
-	}
-	return LockProxyContract.ProxyHashMap(nil, toChainId)
-}
-
-// Swapper
-func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, tokenAddress common.Address) error {
-	if conf.Swapper == ADDRESS_ZERO {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, swapper address in config is ZERO",
-				conf.PolyChainID),
-		)
-	}
-	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperFeeCollectorPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	SwapperContract, err := abi.NewIWrapper(conf.Swapper, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	tx, err := SwapperContract.ExtractFee(auth, tokenAddress)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	return nil
-}
-
-func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, poolId uint64, poolTokenAddress common.Address) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	tx, err := SwapperContract.RegisterPool(auth, poolId, poolTokenAddress)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	return nil
-}
-
-func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, fromAssetHash []byte, poolId uint64) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
-				fromAssetHash,
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
-				fromAssetHash,
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
-				fromAssetHash,
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
-				fromAssetHash,
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	tx, err := SwapperContract.BindAssetAndPool(auth, fromAssetHash, poolId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
-				fromAssetHash,
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
-				fromAssetHash,
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	return nil
-}
-
-func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	tx, err := SwapperContract.Bind3Asset(auth, asset1, asset2, asset3, poolId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	return nil
-}
-
-func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, poolTokenAddress common.Address, asset1 []byte, asset2 []byte, asset3 []byte, poolId uint64) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	tx, err := SwapperContract.RegisterPoolWith3Assets(auth, poolId, poolTokenAddress, asset1, asset2, asset3)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
-				poolId,
-				conf.PolyChainID),
-			err)
-	}
-	return nil
-}
-
-func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
-	}
-	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
-	}
-	tx, err := SwapperContract.Pause(auth)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
-	}
-	return nil
-}
-
-func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
-	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
-	}
-	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
-	}
-	tx, err := SwapperContract.Unpause(auth)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
-	}
-	return nil
-}
-
-func SwapperPaused(client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) (paused bool, err error) {
-	SwapperContract, err := abi.NewISwapperCaller(conf.Swapper, client)
-	if err != nil {
-		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
-	}
-	return SwapperContract.Paused(nil)
-}
-
-func PoolTokenMap(client *ethclient.Client, conf *config.Network, poolId uint64) (poolTokenAddress common.Address, err error) {
-	SwapperContract, err := abi.NewISwapperCaller(conf.Swapper, client)
-	if err != nil {
-		return ADDRESS_ZERO, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
-	}
-	return SwapperContract.PoolTokenMap(nil, poolId)
-}
-
-func AssetInPool(client *ethclient.Client, conf *config.Network, poolId uint64, assetHash []byte) (isIn bool, err error) {
-	SwapperContract, err := abi.NewISwapperCaller(conf.Swapper, client)
-	if err != nil {
-		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
-	}
-	return SwapperContract.AssetInPool(nil, assetHash, poolId)
-}
-
-// Wrapper
-func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, tokenAddress common.Address) error {
-	if conf.Wrapper == ADDRESS_ZERO {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
-				conf.PolyChainID),
-		)
-	}
-	privateKey, err := crypto.HexToECDSA(pkCfg.WrapperFeeCollectorPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	WrapperContract, err := abi.NewIWrapper(conf.Wrapper, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	tx, err := WrapperContract.ExtractFee(auth, tokenAddress)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	return nil
-}
-
-func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
-	if conf.Wrapper == ADDRESS_ZERO {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
-				conf.PolyChainID),
-		)
-	}
-	privateKey, err := crypto.HexToECDSA(pkCfg.WrapperFeeCollectorPrivateKey)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	WrapperContract, err := abi.NewWrapperO3(conf.Wrapper, client)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	chainId, err := client.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	tx, err := WrapperContract.ExtractFee(auth)
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	err = WaitTxConfirm(client, tx.Hash())
-	if err != nil {
-		return fmt.Errorf(
-			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
-				conf.PolyChainID),
-			err)
-	}
-	return nil
+	return WaitTxConfirm(client, tx.Hash(), "120s")
 }
 
 // Basic
-func MakeAuth(client *ethclient.Client, key *ecdsa.PrivateKey, gasLimit uint64, gasMultiple float64, chainId *big.Int) (*bind.TransactOpts, error) {
-	authAddress := crypto.PubkeyToAddress(*key.Public().(*ecdsa.PublicKey))
-	nonce, err := client.PendingNonceAt(context.Background(), authAddress)
-	if err != nil {
-		return nil, fmt.Errorf("makeAuth, addr %s, err %v", authAddress.Hex(), err)
-	}
-
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("makeAuth, get suggest gas price err: %v", err)
-	}
-	res := gasPrice.Mul(gasPrice, big.NewInt(int64(gasMultiple*math.Pow(10, float64(gasMultipleDecimal)))))
-	if res == nil {
-		return nil, fmt.Errorf("calculate actual gas price error (at mul")
-	}
-	res = gasPrice.Div(gasPrice, big.NewInt(int64(math.Pow(10, float64(gasMultipleDecimal)))))
-	if res == nil {
-		return nil, fmt.Errorf("calculate actual gas price error (at div")
-	}
-
-	// auth := bind.NewKeyedTransactor(key)
-	auth, err := bind.NewKeyedTransactorWithChainID(key, chainId)
-	if err != nil {
-		return nil, fmt.Errorf("makeAuth, bind.NewKeyedTransactorWithChainID err: %v", err)
-	}
-	auth.From = authAddress
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(int64(0)) // in wei
-	auth.GasLimit = gasLimit
-	auth.GasPrice = gasPrice
-
-	return auth, nil
-}
-
-func WaitTxConfirm(client *ethclient.Client, hash common.Hash) error {
+func WaitTxConfirm(client *ethclient.Client, hash common.Hash, ddl string) error {
 	ticker := time.NewTicker(time.Second * 1)
-	end := time.Now().Add(60 * time.Second)
+	timeOut, err := time.ParseDuration(ddl)
+	if err != nil {
+		timeOut = time.Second * 60
+	}
+	end := time.Now().Add(timeOut)
 	for now := range ticker.C {
 		_, pending, err := client.TransactionByHash(context.Background(), hash)
 		if err != nil {
-			log.Info("failed to call TransactionByHash: %v", err)
 			if now.After(end) {
-				break
+				return fmt.Errorf("failed to call TransactionByHash: %v", err)
 			}
 			continue
 		}
@@ -865,8 +156,7 @@ func WaitTxConfirm(client *ethclient.Client, hash common.Hash) error {
 		if now.Before(end) {
 			continue
 		}
-		log.Info("Transaction pending for more than 1 min, check transaction %s on explorer yourself, make sure it's confirmed.", hash.Hex())
-		return nil
+		return fmt.Errorf("Transaction pending for more than %s, check transaction %s on explorer yourself, make sure it's confirmed.", timeOut.String(), hash.Hex())
 	}
 
 	tx, err := client.TransactionReceipt(context.Background(), hash)
@@ -879,4 +169,67 @@ func WaitTxConfirm(client *ethclient.Client, hash common.Hash) error {
 	}
 
 	return nil
+}
+
+func SpeedUp(client *ethclient.Client, key *ecdsa.PrivateKey, hash common.Hash, newGasPrice *big.Int) error {
+	tx, pending, err := client.TransactionByHash(context.Background(), hash)
+	if err != nil {
+		return fmt.Errorf("SpeedUp Error: %s", err.Error())
+	}
+	if !pending {
+		return fmt.Errorf("SpeedUp Error: transaction %s has already been packaged", hash.Hex())
+	}
+
+	sender, err := GetSender(tx)
+	if err != nil {
+		return fmt.Errorf("SpeedUp Error: fail to get the sender of tx %s", hash.Hex())
+	}
+	authAddress := crypto.PubkeyToAddress(*key.Public().(*ecdsa.PublicKey))
+	if sender != authAddress {
+		return fmt.Errorf("SpeedUp Error: given key does not match the sender of transaction %s, given %s, want %s", hash.Hex(), authAddress, sender)
+	}
+
+	newTx := types.NewTransaction(tx.Nonce(), *tx.To(), tx.Value(), tx.Gas(), newGasPrice, tx.Data())
+	signer := types.LatestSignerForChainID(tx.ChainId())
+	newTx, err = types.SignTx(newTx, signer, key)
+	err = client.SendTransaction(context.Background(), newTx)
+	return WaitTxConfirm(client, newTx.Hash(), "120s")
+}
+
+func Cancel(client *ethclient.Client, key *ecdsa.PrivateKey, hash common.Hash, newGasPrice *big.Int) error {
+	tx, pending, err := client.TransactionByHash(context.Background(), hash)
+	if err != nil {
+		return fmt.Errorf("Cancel Error: %s", err.Error())
+	}
+	if !pending {
+		return fmt.Errorf("Cancel Error: transaction %s has already been packaged", hash.Hex())
+	}
+
+	sender, err := GetSender(tx)
+	if err != nil {
+		return fmt.Errorf("Cancel Error: fail to get the sender of tx %s", hash.Hex())
+	}
+	authAddress := crypto.PubkeyToAddress(*key.Public().(*ecdsa.PublicKey))
+	if sender != authAddress {
+		return fmt.Errorf("Cancel Error: given key does not match the sender of transaction %s, given %s, want %s", hash.Hex(), authAddress, sender)
+	}
+
+	newTx := types.NewTransaction(tx.Nonce(), authAddress, big.NewInt(0), 21000, newGasPrice, nil)
+	signer := types.LatestSignerForChainID(tx.ChainId())
+	newTx, err = types.SignTx(newTx, signer, key)
+	err = client.SendTransaction(context.Background(), newTx)
+	return WaitTxConfirm(client, newTx.Hash(), "120s")
+}
+
+func GetSender(tx *types.Transaction) (common.Address, error) {
+	v, r, s := tx.RawSignatureValues()
+	sig := append(r.Bytes(), s.Bytes()...)
+	if len(v.Bytes()) == 0 {
+		sig = append(sig, 0x00)
+	} else {
+		sig = append(sig, v.Bytes()...)
+	}
+	hash := types.LatestSignerForChainID(tx.ChainId()).Hash(tx)
+	senderPub, err := crypto.SigToPub(hash.Bytes(), sig)
+	return crypto.PubkeyToAddress(*senderPub), err
 }
