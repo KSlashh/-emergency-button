@@ -75,6 +75,7 @@ func main() {
 			}
 			ccmpAddr := netCfg.EthCrossChainManagerProxy
 
+			log.Infof("prepare %s ...", netCfg.Name)
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
@@ -96,7 +97,6 @@ func main() {
 				continue
 			}
 
-			log.Infof("prepare %s ...", netCfg.Name)
 			txList, err := shutTools.PreparePauseTxns(client, ccmpAddr, privateKey)
 			if err != nil {
 				log.Errorf("fail to prepare txns: %s", err.Error())

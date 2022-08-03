@@ -127,6 +127,9 @@ func (n *PrivateKey) PhraseCCMPrivateKey() (err error) {
 	hasCache1 := n.CCMPOwnerFromKeyStore(passwordCache)
 	ok1 := hasPk1 == nil || hasCache1 == nil
 	if !ok1 {
+		if len(n.CCMPOwnerKeyStore) == 0 {
+			return fmt.Errorf("Empty keystore")
+		}
 		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
