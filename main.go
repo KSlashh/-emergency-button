@@ -153,6 +153,10 @@ func main() {
 				continue
 			}
 			txList := txns.GetTxns(uint64(id))
+			if txList == nil {
+				log.Errorf("txns with chainId %d not found in config file", id)
+				continue
+			}
 
 			go func() {
 				log.Infof("Shutting down %s ...", netCfg.Name)
