@@ -97,7 +97,7 @@ func main() {
 				continue
 			}
 
-			txList, err := shutTools.PreparePauseTxns(client, ccmpAddr, privateKey)
+			txList, err := shutTools.PreparePauseTxns(client, common.HexToAddress(ccmpAddr), privateKey)
 			if err != nil {
 				log.Errorf("fail to prepare txns: %s", err.Error())
 				continue

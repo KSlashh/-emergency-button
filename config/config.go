@@ -20,13 +20,13 @@ type Network struct {
 	PolyChainID               uint64
 	Name                      string
 	Provider                  string
-	Wrapper                   common.Address
-	WrapperO3                 common.Address
-	NativeWrapper             common.Address
-	EthCrossChainManagerProxy common.Address
-	LockProxy                 common.Address
-	LockProxyPip4             common.Address
-	Swapper                   common.Address
+	Wrapper                   string
+	WrapperO3                 string
+	NativeWrapper             string
+	EthCrossChainManagerProxy string
+	LockProxy                 string
+	LockProxyPip4             string
+	Swapper                   string
 	PrivateKeyNo              uint64
 }
 
@@ -50,7 +50,7 @@ type PrivateKey struct {
 	WrapperFeeCollectorKeyStore     string
 	WrapperO3FeeCollectorPrivateKey string
 	WrapperO3FeeCollectorKeyStore   string
-	SenderPublicKey                 common.Address
+	SenderPublicKey                 string
 	SenderPrivateKey                string
 }
 
