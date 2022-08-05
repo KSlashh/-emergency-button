@@ -168,7 +168,7 @@ func main() {
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
-				log.Error(msg.Err)
+				log.Errorf("chain %d error: %s", msg.ChainId, msg.Err)
 			} else {
 				log.Infof("CCM at chain %d has been shut down.", msg.ChainId)
 			}
