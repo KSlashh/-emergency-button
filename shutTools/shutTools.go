@@ -122,7 +122,7 @@ func ExecutePauseTxns(client *ethclient.Client, txns []TransactionWithSig) error
 	}
 	tx := &txns[len(txns)-1].Transaction
 	sig := txns[len(txns)-1].Sig
-	fmt.Printf("SuggestGasPrice: %s too high! Try to send tx with highest gasPrice: %s", suggestGasPrice.String(), tx.GasPrice().String())
+	fmt.Printf("SuggestGasPrice: %s too high! Try to send tx with highest gasPrice: %s\n", suggestGasPrice.String(), tx.GasPrice().String())
 	tx, err = tx.WithSignature(signer, sig)
 	if err != nil {
 		return fmt.Errorf("fail to generate tx with signature: %s", err.Error())

@@ -134,7 +134,7 @@ func main() {
 			log.Info("Done.")
 			return
 		}
-		sig := make(chan Msg, 10)
+		sig := make(chan Msg, 50)
 		cnt := 0
 		for i := 0; i < len(args); i++ {
 			id, err := strconv.Atoi(args[i])
