@@ -4,6 +4,7 @@
 package abi
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,27 +28,41 @@ var (
 	_ = event.NewSubscription
 )
 
-// ICCMPABI is the input ABI used to generate the binding from.
-const ICCMPABI = "[{\"inputs\":[],\"name\":\"pauseEthCrossChainManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpauseEthCrossChainManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
-
-// ICCMPFuncSigs maps the 4-byte function signature to its string representation.
-var ICCMPFuncSigs = map[string]string{
-	"3b9a80b8": "pauseEthCrossChainManager()",
-	"5c975abb": "paused()",
-	"4390c707": "unpauseEthCrossChainManager()",
+// ICCMPMetaData contains all meta data concerning the ICCMP contract.
+var ICCMPMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pauseEthCrossChainManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpauseEthCrossChainManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"8da5cb5b": "owner()",
+		"3b9a80b8": "pauseEthCrossChainManager()",
+		"5c975abb": "paused()",
+		"4390c707": "unpauseEthCrossChainManager()",
+	},
+	Bin: "0x608060405234801561001057600080fd5b5060c28061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060465760003560e01c80633b9a80b814604b5780634390c70714604b5780635c975abb14604b5780638da5cb5b146065575b600080fd5b60516087565b604080519115158252519081900360200190f35b606b6087565b604080516001600160a01b039092168252519081900360200190f35b60009056fea264697066735822122066ba4f5ba17e1a32dd8db5dbd4965fbf41d9f4586400fb644949eb44a7c41a6d64736f6c634300060c0033",
 }
 
+// ICCMPABI is the input ABI used to generate the binding from.
+// Deprecated: Use ICCMPMetaData.ABI instead.
+var ICCMPABI = ICCMPMetaData.ABI
+
+// Deprecated: Use ICCMPMetaData.Sigs instead.
+// ICCMPFuncSigs maps the 4-byte function signature to its string representation.
+var ICCMPFuncSigs = ICCMPMetaData.Sigs
+
 // ICCMPBin is the compiled bytecode used for deploying new contracts.
-var ICCMPBin = "0x6080604052348015600f57600080fd5b5060968061001e6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80633b9a80b81460415780634390c7071460415780635c975abb146041575b600080fd5b6047605b565b604080519115158252519081900360200190f35b60009056fea26469706673582212208000fca8670feb8de90d40c21a4228fdad546a5c02c989a6673cf61b2abb8d0f64736f6c634300060c0033"
+// Deprecated: Use ICCMPMetaData.Bin instead.
+var ICCMPBin = ICCMPMetaData.Bin
 
 // DeployICCMP deploys a new Ethereum contract, binding an instance of ICCMP to it.
 func DeployICCMP(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ICCMP, error) {
-	parsed, err := abi.JSON(strings.NewReader(ICCMPABI))
+	parsed, err := ICCMPMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ICCMPBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ICCMPBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -193,6 +209,37 @@ func (_ICCMP *ICCMPTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Tran
 // Transact invokes the (paid) contract method with params as input values.
 func (_ICCMP *ICCMPTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _ICCMP.Contract.contract.Transact(opts, method, params...)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_ICCMP *ICCMPCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _ICCMP.contract.Call(opts, &out, "owner")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_ICCMP *ICCMPSession) Owner() (common.Address, error) {
+	return _ICCMP.Contract.Owner(&_ICCMP.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_ICCMP *ICCMPCallerSession) Owner() (common.Address, error) {
+	return _ICCMP.Contract.Owner(&_ICCMP.CallOpts)
 }
 
 // Paused is a free data retrieval call binding the contract method 0x5c975abb.
