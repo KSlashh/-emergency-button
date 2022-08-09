@@ -52,6 +52,39 @@ func (c *TxConfig) GetTxns(index uint64) (txList *TransactionList) {
 }
 
 // CCM
+func PrepareUnsignedTxns(client *ethclient.Client, ccmp common.Address) (txns []TransactionWithSig, err error) {
+	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
+	if err != nil {
+		return nil, fmt.Errorf("fail to load abi: %s", err.Error())
+	}
+	from, err := GetOwner(client, ccmp)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get owner of ccmp: %s", err.Error())
+	}
+	to := ccmp
+	nonce, err := client.PendingNonceAt(context.Background(), from)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get nonce: %s", err.Error())
+	}
+	value := big.NewInt(0)
+	data, err := CCMPABI.Pack("pauseEthCrossChainManager")
+	if err != nil {
+		return nil, fmt.Errorf("fail to pack data: %s", err.Error())
+	}
+	msg := ethereum.CallMsg{From: from, To: &to, Value: value, Data: data}
+	gasLimit, err := client.EstimateGas(context.Background(), msg)
+	if err != nil {
+		return nil, fmt.Errorf("fail to estimate gas: %s", err.Error())
+	}
+	gasLimit = gasLimit * DefaultGasLimitMultiple / MultipleDecimal
+	for i := 0; i < len(GasPriceList); i++ {
+		gasPrice := big.NewInt(GasPriceList[i] * Gwei)
+		tx := types.NewTransaction(nonce, to, value, gasLimit, gasPrice, data)
+		txns = append(txns, TransactionWithSig{*tx, nil})
+	}
+	return txns, nil
+}
+
 func PreparePauseTxns(client *ethclient.Client, ccmp common.Address, privateKey *ecdsa.PrivateKey) (txns []TransactionWithSig, err error) {
 	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
 	if err != nil {
@@ -132,6 +165,28 @@ func ExecutePauseTxns(client *ethclient.Client, txns []TransactionWithSig) error
 		return fmt.Errorf("fail to send transaction: %s", err.Error())
 	}
 	return WaitTxConfirm(client, tx.Hash(), "120s")
+}
+
+func GetOwner(client *ethclient.Client, contractAddress common.Address) (common.Address, error) {
+	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
+	if err != nil {
+		return ADDRESS_ZERO, fmt.Errorf("fail to load abi: %s", err.Error())
+	}
+	queryData, err := CCMPABI.Pack("owner")
+	if err != nil {
+		return ADDRESS_ZERO, fmt.Errorf("GetOwner() Error: fail to pack tx: %s", err.Error())
+	}
+	queryMsg := ethereum.CallMsg{To: &contractAddress, Data: queryData}
+	res, err := client.CallContract(context.Background(), queryMsg, nil)
+	if err != nil {
+		return ADDRESS_ZERO, fmt.Errorf("GetOwner() Error: fail while CallContract: %s", err.Error())
+	}
+	result, err := CCMPABI.Unpack("owner", res)
+	if err != nil {
+		return ADDRESS_ZERO, fmt.Errorf("GetOwner() Error: fail to unpack result: %s", err.Error())
+	}
+	owner := result[0].(common.Address)
+	return owner, nil
 }
 
 // Basic
