@@ -31,7 +31,7 @@ var all bool
 
 func init() {
 	flag.StringVar(&inputFile, "i", "./txnsWithSig.json", "input txns file path")
-	flag.StringVar(&outputFile, "o", "./txnsWithSig.json", "output txns file path")
+	flag.StringVar(&outputFile, "o", "./rawTxns.json", "output txns file path")
 	flag.StringVar(&confFile, "conf", "../ConfigJson/zionDevConfig.json", "configuration file path")
 	flag.StringVar(&pkconfFile, "pkconf", "../PKConfig/PkConfig.json", "PrivateKey configuration file path")
 	flag.BoolVar(&all, "all", false, "shut/restart all in config file")
@@ -229,8 +229,9 @@ func main() {
 				break
 			}
 		}
+	case "debug":
 	default:
-		log.Fatal("unknown function", function)
+		log.Errorf("unknown function", function)
 	}
 
 }

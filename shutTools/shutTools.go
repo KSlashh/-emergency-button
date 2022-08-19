@@ -1,6 +1,7 @@
 package shutTools
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var MultipleDecimal uint64 = 100
@@ -30,7 +32,10 @@ var Gwei int64 = 1000000000
 
 type TransactionWithSig struct {
 	Transaction types.Transaction
-	Sig         []byte
+	Sender      string
+	Raw         string
+	Hash        string
+	Sig         string
 }
 
 type TransactionList struct {
@@ -57,6 +62,10 @@ func PrepareUnsignedTxns(client *ethclient.Client, ccmp common.Address) (txns []
 	if err != nil {
 		return nil, fmt.Errorf("fail to load abi: %s", err.Error())
 	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get chainId: %s", err.Error())
+	}
 	from, err := GetOwner(client, ccmp)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get owner of ccmp: %s", err.Error())
@@ -80,7 +89,21 @@ func PrepareUnsignedTxns(client *ethclient.Client, ccmp common.Address) (txns []
 	for i := 0; i < len(GasPriceList); i++ {
 		gasPrice := big.NewInt(GasPriceList[i] * Gwei)
 		tx := types.NewTransaction(nonce, to, value, gasLimit, gasPrice, data)
-		txns = append(txns, TransactionWithSig{*tx, nil})
+		rawTx, err := rlp.EncodeToBytes([]interface{}{
+			tx.Nonce(),
+			tx.GasPrice(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+			chainId, uint(0), uint(0),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("fail to encode transaction: %s", err.Error())
+		}
+		signer := types.LatestSignerForChainID(chainId)
+		h := signer.Hash(tx)
+		txns = append(txns, TransactionWithSig{*tx, from.Hex(), common.Bytes2Hex(rawTx), h.Hex(), ""})
 	}
 	return txns, nil
 }
@@ -120,7 +143,15 @@ func PreparePauseTxns(client *ethclient.Client, ccmp common.Address, privateKey 
 		if err != nil {
 			return nil, fmt.Errorf("fail to sign: %s", err.Error())
 		}
-		txns = append(txns, TransactionWithSig{*tx, sig})
+		tx, err = tx.WithSignature(signer, sig)
+		if err != nil {
+			return nil, fmt.Errorf("fail to generate tx with signature: %s", err.Error())
+		}
+		rawTx, err := tx.MarshalBinary()
+		if err != nil {
+			return nil, fmt.Errorf("fail to encode transaction: %s", err.Error())
+		}
+		txns = append(txns, TransactionWithSig{*tx, from.Hex(), common.Bytes2Hex(rawTx), h.Hex(), common.Bytes2Hex(sig)})
 	}
 	return txns, nil
 }
@@ -139,13 +170,19 @@ func ExecutePauseTxns(client *ethclient.Client, txns []TransactionWithSig) error
 	signer := types.LatestSignerForChainID(chainId)
 	for i := 0; i < len(txns); i++ {
 		tx := &txns[i].Transaction
-		sig := txns[i].Sig
+		if tx.GasPrice().Int64() < suggestGasPrice.Int64() {
+			continue
+		}
+		sig := common.FromHex(txns[i].Sig)
+		hash := common.FromHex(txns[i].Hash)
+		sender := common.HexToAddress(txns[i].Sender)
+		sig, err := SetV(hash, sig, sender)
+		if err != nil {
+			continue
+		}
 		tx, err = tx.WithSignature(signer, sig)
 		if err != nil {
 			return fmt.Errorf("fail to generate tx with signature: %s", err.Error())
-		}
-		if tx.GasPrice().Int64() < suggestGasPrice.Int64() {
-			continue
 		}
 		err = client.SendTransaction(context.Background(), tx)
 		if err != nil {
@@ -154,8 +191,14 @@ func ExecutePauseTxns(client *ethclient.Client, txns []TransactionWithSig) error
 		return WaitTxConfirm(client, tx.Hash(), "120s")
 	}
 	tx := &txns[len(txns)-1].Transaction
-	sig := txns[len(txns)-1].Sig
-	fmt.Printf("SuggestGasPrice: %s too high! Try to send tx with highest gasPrice: %s\n", suggestGasPrice.String(), tx.GasPrice().String())
+	fmt.Printf("SuggestGasPrice: %s . No suitable tx! Try to send tx with highest gasPrice: %s\n", suggestGasPrice.String(), tx.GasPrice().String())
+	sig := common.FromHex(txns[len(txns)-1].Sig)
+	hash := common.FromHex(txns[len(txns)-1].Hash)
+	sender := common.HexToAddress(txns[len(txns)-1].Sender)
+	sig, err = SetV(hash, sig, sender)
+	if err != nil {
+		return err
+	}
 	tx, err = tx.WithSignature(signer, sig)
 	if err != nil {
 		return fmt.Errorf("fail to generate tx with signature: %s", err.Error())
@@ -287,4 +330,20 @@ func GetSender(tx *types.Transaction) (common.Address, error) {
 	hash := types.LatestSignerForChainID(tx.ChainId()).Hash(tx)
 	senderPub, err := crypto.SigToPub(hash.Bytes(), sig)
 	return crypto.PubkeyToAddress(*senderPub), err
+}
+
+func SetV(hash, signature []byte, signer common.Address) ([]byte, error) {
+	if len(signature) != 65 {
+		return nil, fmt.Errorf("invalid signature length")
+	}
+	signature[64] = 0
+	pk, err := crypto.SigToPub(hash, signature)
+	if err != nil || bytes.Compare(crypto.PubkeyToAddress(*pk).Bytes(), signer.Bytes()) != 0 {
+		signature[64] = 1
+		pk, err = crypto.SigToPub(hash, signature)
+		if err != nil || bytes.Compare(crypto.PubkeyToAddress(*pk).Bytes(), signer.Bytes()) != 0 {
+			return nil, fmt.Errorf("invalid signature")
+		}
+	}
+	return signature, nil
 }
