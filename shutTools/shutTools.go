@@ -27,7 +27,7 @@ var DefaultGasPriceMultiple int64 = 200
 
 var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
-var GasPriceList []int64 = []int64{1, 5, 10, 20, 50, 100, 200, 500, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000, 10000}
+var GasPriceList []int64 = []int64{10, 100, 500, 1000}
 var Gwei int64 = 1000000000
 
 type TransactionWithSig struct {
