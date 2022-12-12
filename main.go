@@ -230,6 +230,71 @@ func main() {
 			}
 		}
 	case "debug":
+		log.Info("Processing...")
+
+		conf, err := config.LoadConfig(confFile)
+		if err != nil {
+			log.Fatal("LoadConfig fail", err)
+		}
+
+		PKconfig, err := config.LoadPrivateKeyConfig(pkconfFile)
+		if err != nil {
+			log.Fatal("LoadConfig fail", err)
+		}
+
+		txns, err := readTxConfig(inputFile)
+		if err != nil {
+			log.Fatal("LoadTxns fail", err)
+		}
+
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+
+			log.Infof("prepare %s ...", netCfg.Name)
+			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
+			if pkCfg == nil {
+				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			}
+			err = pkCfg.PhraseCCMPrivateKey()
+			if err != nil {
+				log.Errorf("%v", err)
+				continue
+			}
+			privateKey, err := crypto.HexToECDSA(pkCfg.CCMPOwnerPrivateKey)
+			if err != nil {
+				log.Errorf("%v", err)
+				continue
+			}
+
+			tx := txns.GetTxns(uint64(id))
+			raw := common.FromHex(tx.TxList[0].Raw)
+
+			sig, err := shutTools.Sign(raw, privateKey)
+			if err != nil {
+				log.Errorf("fail to prepare txns: %s", err.Error())
+				continue
+			}
+			fmt.Printf("sig: %x", sig)
+
+			txns.Txns[0].TxList[0].Sig = common.Bytes2Hex(sig)
+			writeTxConfig(txns, inputFile)
+		}
+
 	default:
 		log.Errorf("unknown function", function)
 	}

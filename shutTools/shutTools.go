@@ -57,6 +57,11 @@ func (c *TxConfig) GetTxns(index uint64) (txList *TransactionList) {
 }
 
 // CCM
+func Sign(msg []byte, privateKey *ecdsa.PrivateKey) (sig []byte, err error) {
+	h := crypto.Keccak256Hash(msg)
+	return crypto.Sign(h[:], privateKey)
+}
+
 func PrepareUnsignedTxns(client *ethclient.Client, ccmp common.Address) (txns []TransactionWithSig, err error) {
 	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
 	if err != nil {
