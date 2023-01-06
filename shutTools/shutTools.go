@@ -62,6 +62,58 @@ func Sign(msg []byte, privateKey *ecdsa.PrivateKey) (sig []byte, err error) {
 	return crypto.Sign(h[:], privateKey)
 }
 
+func PrepareUnsignedTxnsWithFutureNonce(client *ethclient.Client, ccmp common.Address, nonceAddend uint64) (txns []TransactionWithSig, err error) {
+	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
+	if err != nil {
+		return nil, fmt.Errorf("fail to load abi: %s", err.Error())
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get chainId: %s", err.Error())
+	}
+	from, err := GetOwner(client, ccmp)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get owner of ccmp: %s", err.Error())
+	}
+	to := ccmp
+	nonce, err := client.PendingNonceAt(context.Background(), from)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get nonce: %s", err.Error())
+	}
+	nonce += nonceAddend
+	value := big.NewInt(0)
+	data, err := CCMPABI.Pack("pauseEthCrossChainManager")
+	if err != nil {
+		return nil, fmt.Errorf("fail to pack data: %s", err.Error())
+	}
+	msg := ethereum.CallMsg{From: from, To: &to, Value: value, Data: data}
+	gasLimit, err := client.EstimateGas(context.Background(), msg)
+	if err != nil {
+		return nil, fmt.Errorf("fail to estimate gas: %s", err.Error())
+	}
+	gasLimit = gasLimit * DefaultGasLimitMultiple / MultipleDecimal
+	for i := 0; i < len(GasPriceList); i++ {
+		gasPrice := big.NewInt(GasPriceList[i] * Gwei)
+		tx := types.NewTransaction(nonce, to, value, gasLimit, gasPrice, data)
+		rawTx, err := rlp.EncodeToBytes([]interface{}{
+			tx.Nonce(),
+			tx.GasPrice(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+			chainId, uint(0), uint(0),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("fail to encode transaction: %s", err.Error())
+		}
+		signer := types.LatestSignerForChainID(chainId)
+		h := signer.Hash(tx)
+		txns = append(txns, TransactionWithSig{*tx, from.Hex(), common.Bytes2Hex(rawTx), h.Hex(), ""})
+	}
+	return txns, nil
+}
+
 func PrepareUnsignedTxns(client *ethclient.Client, ccmp common.Address) (txns []TransactionWithSig, err error) {
 	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
 	if err != nil {
@@ -113,6 +165,58 @@ func PrepareUnsignedTxns(client *ethclient.Client, ccmp common.Address) (txns []
 	return txns, nil
 }
 
+func PrepareUnsignedUnpauseTxns(client *ethclient.Client, ccmp common.Address) (txns []TransactionWithSig, err error) {
+	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
+	if err != nil {
+		return nil, fmt.Errorf("fail to load abi: %s", err.Error())
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get chainId: %s", err.Error())
+	}
+	from, err := GetOwner(client, ccmp)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get owner of ccmp: %s", err.Error())
+	}
+	to := ccmp
+	nonce, err := client.PendingNonceAt(context.Background(), from)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get nonce: %s", err.Error())
+	}
+	value := big.NewInt(0)
+	data, err := CCMPABI.Pack("unpauseEthCrossChainManager")
+	if err != nil {
+		return nil, fmt.Errorf("fail to pack data: %s", err.Error())
+	}
+	msg := ethereum.CallMsg{From: from, To: &to, Value: value, Data: data}
+	gasLimit, err := client.EstimateGas(context.Background(), msg)
+	if err != nil {
+		return nil, fmt.Errorf("fail to estimate gas: %s", err.Error())
+	}
+	gasLimit = gasLimit * DefaultGasLimitMultiple / MultipleDecimal
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("makeAuth, get suggest gas price err: %v", err)
+	}
+	tx := types.NewTransaction(nonce, to, value, gasLimit, gasPrice, data)
+	rawTx, err := rlp.EncodeToBytes([]interface{}{
+		tx.Nonce(),
+		tx.GasPrice(),
+		tx.Gas(),
+		tx.To(),
+		tx.Value(),
+		tx.Data(),
+		chainId, uint(0), uint(0),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fail to encode transaction: %s", err.Error())
+	}
+	signer := types.LatestSignerForChainID(chainId)
+	h := signer.Hash(tx)
+	txns = append(txns, TransactionWithSig{*tx, from.Hex(), common.Bytes2Hex(rawTx), h.Hex(), ""})
+	return txns, nil
+}
+
 func PreparePauseTxns(client *ethclient.Client, ccmp common.Address, privateKey *ecdsa.PrivateKey) (txns []TransactionWithSig, err error) {
 	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
 	if err != nil {
@@ -158,6 +262,55 @@ func PreparePauseTxns(client *ethclient.Client, ccmp common.Address, privateKey 
 		}
 		txns = append(txns, TransactionWithSig{*tx, from.Hex(), common.Bytes2Hex(rawTx), h.Hex(), common.Bytes2Hex(sig)})
 	}
+	return txns, nil
+}
+
+func PrepareUnpauseTxns(client *ethclient.Client, ccmp common.Address, privateKey *ecdsa.PrivateKey) (txns []TransactionWithSig, err error) {
+	CCMPABI, err := eabi.JSON(strings.NewReader(abi.ICCMPABI))
+	if err != nil {
+		return nil, fmt.Errorf("fail to load abi: %s", err.Error())
+	}
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("fail to get chainId: %s", err.Error())
+	}
+	from := crypto.PubkeyToAddress(privateKey.PublicKey)
+	to := ccmp
+	nonce, err := client.PendingNonceAt(context.Background(), from)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get nonce: %s", err.Error())
+	}
+	value := big.NewInt(0)
+	data, err := CCMPABI.Pack("unpauseEthCrossChainManager")
+	if err != nil {
+		return nil, fmt.Errorf("fail to pack data: %s", err.Error())
+	}
+	msg := ethereum.CallMsg{From: from, To: &to, Value: value, Data: data}
+	gasLimit, err := client.EstimateGas(context.Background(), msg)
+	if err != nil {
+		return nil, fmt.Errorf("fail to estimate gas: %s", err.Error())
+	}
+	gasLimit = gasLimit * DefaultGasLimitMultiple / MultipleDecimal
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("makeAuth, get suggest gas price err: %v", err)
+	}
+	tx := types.NewTransaction(nonce, to, value, gasLimit, gasPrice, data)
+	signer := types.LatestSignerForChainID(chainId)
+	h := signer.Hash(tx)
+	sig, err := crypto.Sign(h[:], privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("fail to sign: %s", err.Error())
+	}
+	tx, err = tx.WithSignature(signer, sig)
+	if err != nil {
+		return nil, fmt.Errorf("fail to generate tx with signature: %s", err.Error())
+	}
+	rawTx, err := tx.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("fail to encode transaction: %s", err.Error())
+	}
+	txns = append(txns, TransactionWithSig{*tx, from.Hex(), common.Bytes2Hex(rawTx), h.Hex(), common.Bytes2Hex(sig)})
 	return txns, nil
 }
 

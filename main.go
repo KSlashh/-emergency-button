@@ -36,15 +36,122 @@ func init() {
 	flag.StringVar(&pkconfFile, "pkconf", "../PKConfig/PkConfig.json", "PrivateKey configuration file path")
 	flag.BoolVar(&all, "all", false, "shut/restart all in config file")
 	flag.StringVar(&function, "func", "", "choose function to run:\n"+
-		"  -func raw -conf <./config.json>  -o <./rawTxns.json>  { -all | [chainId_0 chainId_1 chainId_2 ...] }\n"+
+		"\n  generate raw txn:\n"+
+		"  -func unpause -conf <./config.json>  -o <./rawTxns.json>  { -all | [chainId_0 chainId_1 chainId_2 ...] }\n"+
+		"  -func futurePause -conf <./config.json>  -o <./rawTxns.json>  { -all | [chainId_0 chainId_1 chainId_2 ...] }\n"+
+		"  -func pause -conf <./config.json>  -o <./rawTxns.json>  { -all | [chainId_0 chainId_1 chainId_2 ...] }\n"+
+		"\n	 sign\n"+
 		"  -func prepare -conf <./config.json>  -o <./txnsWithSig.json>  -pkconf <./pkconfig.json> { -all | [chainId_0 chainId_1 chainId_2 ...] }\n"+
+		"\n	 execute\n"+
 		"  -func execute -conf <./config.json>  -i <./txnsWithSig.json> { -all | [chainId_0 chainId_1 chainId_2 ...] }\n")
 	flag.Parse()
 }
 
 func main() {
 	switch function {
-	case "raw":
+	case "unpause":
+		log.Info("Processing...")
+
+		conf, err := config.LoadConfig(confFile)
+		if err != nil {
+			log.Fatal("LoadConfig fail", err)
+		}
+
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		txns := shutTools.TxConfig{}
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			ccmpAddr := netCfg.EthCrossChainManagerProxy
+
+			log.Infof("prepare %s ...", netCfg.Name)
+
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+
+			txList, err := shutTools.PrepareUnsignedUnpauseTxns(client, common.HexToAddress(ccmpAddr))
+			if err != nil {
+				log.Errorf("fail to prepare txns: %s", err.Error())
+				continue
+			}
+
+			txns.Txns = append(txns.Txns, shutTools.TransactionList{PolyChainID: uint64(id), TxList: txList})
+
+			err = writeTxConfig(txns, outputFile)
+			if err != nil {
+				log.Errorf("fail to write to file: %s: %s", outputFile, err.Error())
+				continue
+			}
+
+			log.Infof("%s is prepared.", netCfg.Name)
+		}
+	case "future":
+		log.Info("Processing...")
+
+		conf, err := config.LoadConfig(confFile)
+		if err != nil {
+			log.Fatal("LoadConfig fail", err)
+		}
+
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		txns := shutTools.TxConfig{}
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+			ccmpAddr := netCfg.EthCrossChainManagerProxy
+
+			log.Infof("prepare %s ...", netCfg.Name)
+
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+
+			txList, err := shutTools.PrepareUnsignedTxnsWithFutureNonce(client, common.HexToAddress(ccmpAddr), 1)
+			if err != nil {
+				log.Errorf("fail to prepare txns: %s", err.Error())
+				continue
+			}
+
+			txns.Txns = append(txns.Txns, shutTools.TransactionList{PolyChainID: uint64(id), TxList: txList})
+
+			err = writeTxConfig(txns, outputFile)
+			if err != nil {
+				log.Errorf("fail to write to file: %s: %s", outputFile, err.Error())
+				continue
+			}
+
+			log.Infof("%s is prepared.", netCfg.Name)
+		}
+	case "pause":
 		log.Info("Processing...")
 
 		conf, err := config.LoadConfig(confFile)
