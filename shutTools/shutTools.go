@@ -198,6 +198,7 @@ func PrepareUnsignedUnpauseTxns(client *ethclient.Client, ccmp common.Address) (
 	if err != nil {
 		return nil, fmt.Errorf("makeAuth, get suggest gas price err: %v", err)
 	}
+	gasPrice.Mul(gasPrice, big.NewInt(2))
 	tx := types.NewTransaction(nonce, to, value, gasLimit, gasPrice, data)
 	rawTx, err := rlp.EncodeToBytes([]interface{}{
 		tx.Nonce(),
@@ -295,6 +296,7 @@ func PrepareUnpauseTxns(client *ethclient.Client, ccmp common.Address, privateKe
 	if err != nil {
 		return nil, fmt.Errorf("makeAuth, get suggest gas price err: %v", err)
 	}
+	gasPrice.Mul(gasPrice, big.NewInt(2))
 	tx := types.NewTransaction(nonce, to, value, gasLimit, gasPrice, data)
 	signer := types.LatestSignerForChainID(chainId)
 	h := signer.Hash(tx)
