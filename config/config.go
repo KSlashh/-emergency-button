@@ -122,7 +122,7 @@ func (n *PkConfig) GetSenderPrivateKey(index uint64) (pkConfig *PrivateKey) {
 	return nil
 }
 
-func (n *PrivateKey) PhraseCCMPrivateKey() (err error) {
+func (n *PrivateKey) ParseCCMPrivateKey() (err error) {
 	_, hasPk1 := crypto.HexToECDSA(n.CCMPOwnerPrivateKey)
 	hasCache1 := n.CCMPOwnerFromKeyStore(passwordCache)
 	ok1 := hasPk1 == nil || hasCache1 == nil
@@ -130,7 +130,7 @@ func (n *PrivateKey) PhraseCCMPrivateKey() (err error) {
 		fmt.Printf("Please type in password of %s: ", n.CCMPOwnerKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 		fmt.Println()
 		password := string(pass)
@@ -138,13 +138,13 @@ func (n *PrivateKey) PhraseCCMPrivateKey() (err error) {
 		passwordCache = password
 		err = n.CCMPOwnerFromKeyStore(password)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 	}
 	return nil
 }
 
-func (n *PrivateKey) PhraseLockProxyPrivateKey() (err error) {
+func (n *PrivateKey) ParseLockProxyPrivateKey() (err error) {
 	_, hasPk2 := crypto.HexToECDSA(n.LockProxyOwnerPrivateKey)
 	hasCache2 := n.LockProxyOwnerFromKeyStore(passwordCache)
 	ok2 := hasPk2 == nil || hasCache2 == nil
@@ -152,7 +152,7 @@ func (n *PrivateKey) PhraseLockProxyPrivateKey() (err error) {
 		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 		fmt.Println()
 		password := string(pass)
@@ -160,12 +160,12 @@ func (n *PrivateKey) PhraseLockProxyPrivateKey() (err error) {
 		passwordCache = password
 		err = n.LockProxyOwnerFromKeyStore(password)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 	}
 	return nil
 }
-func (n *PrivateKey) PhraseLockProxyPip4PrivateKey() (err error) {
+func (n *PrivateKey) ParseLockProxyPip4PrivateKey() (err error) {
 	_, hasPk2 := crypto.HexToECDSA(n.LockProxyPip4OwnerPrivateKey)
 	hasCache2 := n.LockProxyPip4OwnerFromKeyStore(passwordCache)
 	ok2 := hasPk2 == nil || hasCache2 == nil
@@ -173,7 +173,7 @@ func (n *PrivateKey) PhraseLockProxyPip4PrivateKey() (err error) {
 		fmt.Printf("Please type in password of %s: ", n.LockProxyOwnerKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 		fmt.Println()
 		password := string(pass)
@@ -181,13 +181,13 @@ func (n *PrivateKey) PhraseLockProxyPip4PrivateKey() (err error) {
 		passwordCache = password
 		err = n.LockProxyPip4OwnerFromKeyStore(password)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 	}
 	return nil
 }
 
-func (n *PrivateKey) PhraseSwapperPrivateKey() (err error) {
+func (n *PrivateKey) ParseSwapperPrivateKey() (err error) {
 	_, hasPk3 := crypto.HexToECDSA(n.SwapperOwnerPrivateKey)
 	hasCache3 := n.SwapperOwnerFromKeyStore(passwordCache)
 	ok := hasPk3 == nil || hasCache3 == nil
@@ -195,7 +195,7 @@ func (n *PrivateKey) PhraseSwapperPrivateKey() (err error) {
 		fmt.Printf("Please type in password of %s: ", n.SwapperOwnerKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 		fmt.Println()
 		password := string(pass)
@@ -203,13 +203,13 @@ func (n *PrivateKey) PhraseSwapperPrivateKey() (err error) {
 		passwordCache = password
 		err = n.SwapperOwnerFromKeyStore(password)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 	}
 	return nil
 }
 
-func (n *PrivateKey) PhraseSwapperFeeCollectorPrivateKey() (err error) {
+func (n *PrivateKey) ParseSwapperFeeCollectorPrivateKey() (err error) {
 	_, hasPk4 := crypto.HexToECDSA(n.SwapperFeeCollectorPrivateKey)
 	hasCache4 := n.SwapperFeeCollectorFromKeyStore(passwordCache)
 	ok := hasPk4 == nil || hasCache4 == nil
@@ -217,7 +217,7 @@ func (n *PrivateKey) PhraseSwapperFeeCollectorPrivateKey() (err error) {
 		fmt.Printf("Please type in password of %s: ", n.SwapperFeeCollectorKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 		fmt.Println()
 		password := string(pass)
@@ -225,13 +225,13 @@ func (n *PrivateKey) PhraseSwapperFeeCollectorPrivateKey() (err error) {
 		passwordCache = password
 		err = n.SwapperFeeCollectorFromKeyStore(password)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 	}
 	return nil
 }
 
-func (n *PrivateKey) PhraseWrapperFeeCollectorPrivateKey() (err error) {
+func (n *PrivateKey) ParseWrapperFeeCollectorPrivateKey() (err error) {
 	_, hasPk5 := crypto.HexToECDSA(n.WrapperFeeCollectorPrivateKey)
 	hasCache5 := n.WrapperFeeCollectorFromKeyStore(passwordCache)
 	ok := hasPk5 == nil || hasCache5 == nil
@@ -239,7 +239,7 @@ func (n *PrivateKey) PhraseWrapperFeeCollectorPrivateKey() (err error) {
 		fmt.Printf("Please type in password of %s: ", n.WrapperFeeCollectorKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 		fmt.Println()
 		password := string(pass)
@@ -247,13 +247,13 @@ func (n *PrivateKey) PhraseWrapperFeeCollectorPrivateKey() (err error) {
 		passwordCache = password
 		err = n.WrapperFeeCollectorFromKeyStore(password)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 	}
 	return nil
 }
 
-func (n *PrivateKey) PhraseWrapperO3FeeCollectorPrivateKey() (err error) {
+func (n *PrivateKey) ParseWrapperO3FeeCollectorPrivateKey() (err error) {
 	_, hasPk6 := crypto.HexToECDSA(n.WrapperO3FeeCollectorPrivateKey)
 	hasCache6 := n.WrapperO3FeeCollectorFromKeyStore(passwordCache)
 	ok := hasPk6 == nil || hasCache6 == nil
@@ -261,7 +261,7 @@ func (n *PrivateKey) PhraseWrapperO3FeeCollectorPrivateKey() (err error) {
 		fmt.Printf("Please type in password of %s: ", n.WrapperO3FeeCollectorKeyStore)
 		pass, err := terminal.ReadPassword(0)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 		fmt.Println()
 		password := string(pass)
@@ -269,7 +269,7 @@ func (n *PrivateKey) PhraseWrapperO3FeeCollectorPrivateKey() (err error) {
 		passwordCache = password
 		err = n.WrapperO3FeeCollectorFromKeyStore(password)
 		if err != nil {
-			return fmt.Errorf("fail to phrase private key, %v", err)
+			return fmt.Errorf("fail to Parse private key, %v", err)
 		}
 	}
 	return nil

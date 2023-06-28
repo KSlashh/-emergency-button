@@ -87,7 +87,7 @@ func RestartCCM(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	return nil
 }
 
-func CCMPaused(client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) (paused bool, err error) {
+func CCMPaused(client *ethclient.Client, conf *config.Network) (paused bool, err error) {
 	CCMPContract, err := abi.NewICCMPCaller(conf.EthCrossChainManagerProxy, client)
 	if err != nil {
 		return false, fmt.Errorf(fmt.Sprintf("fail while request CCM of %s ,", conf.Name), err)
@@ -754,14 +754,14 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 }
 
 func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
-	if conf.Wrapper == ADDRESS_ZERO {
+	if conf.WrapperO3 == ADDRESS_ZERO {
 		return fmt.Errorf(
 			fmt.Sprintf(
 				"fail while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
 				conf.PolyChainID),
 		)
 	}
-	privateKey, err := crypto.HexToECDSA(pkCfg.WrapperFeeCollectorPrivateKey)
+	privateKey, err := crypto.HexToECDSA(pkCfg.WrapperO3FeeCollectorPrivateKey)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
@@ -769,7 +769,7 @@ func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *co
 				conf.PolyChainID),
 			err)
 	}
-	WrapperContract, err := abi.NewWrapperO3(conf.Wrapper, client)
+	WrapperContract, err := abi.NewWrapperO3(conf.WrapperO3, client)
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(

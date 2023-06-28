@@ -67,9 +67,9 @@ type Tokenlist struct {
 func init() {
 	flag.Uint64Var(&poolId, "pool", 0, "pool id if needed")
 	flag.Uint64Var(&chainId, "chain", 0, "chain id if single chainId needed")
-	flag.StringVar(&tokenFile, "token", "../ConfigJso/TokenWithLP.json", "token configuration file path")
-	flag.StringVar(&confFile, "conf", "../ConfigJson/zionDevConfig.json", "configuration file path")
-	flag.StringVar(&pkconfFile, "pkconf", "../PKConfig/PkConfig.json", "PrivateKey configuration file path")
+	flag.StringVar(&tokenFile, "token", "./configs/token.json", "token configuration file path")
+	flag.StringVar(&confFile, "conf", "./configs/config.json", "configuration file path")
+	flag.StringVar(&pkconfFile, "pkconf", "./configs/pk.json", "PrivateKey configuration file path")
 	flag.Float64Var(&multiple, "mul", 1, "multiple of gasPrice, actual_gasPrice = suggested_gasPrice * mul ")
 	flag.BoolVar(&force, "force", false, "need force send override bind or not")
 	flag.BoolVar(&pip4, "pip4", false, "deploy lp or token")
@@ -141,7 +141,7 @@ func main() {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
 
-			err = pkCfg.PhraseCCMPrivateKey()
+			err = pkCfg.ParseCCMPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -153,7 +153,7 @@ func main() {
 			}
 			go func() {
 				log.Infof("Shutting down %s ...", netCfg.Name)
-				paused, err := shutTools.CCMPaused(client, netCfg, pkCfg)
+				paused, err := shutTools.CCMPaused(client, netCfg)
 				if err != nil {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
@@ -207,7 +207,7 @@ func main() {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
 
-			err = pkCfg.PhraseCCMPrivateKey()
+			err = pkCfg.ParseCCMPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -219,7 +219,7 @@ func main() {
 			}
 			go func() {
 				log.Infof("Restarting %s ...", netCfg.Name)
-				paused, err := shutTools.CCMPaused(client, netCfg, pkCfg)
+				paused, err := shutTools.CCMPaused(client, netCfg)
 				if err != nil {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
@@ -283,7 +283,7 @@ func main() {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
 
-			err = pkCfg.PhraseLockProxyPrivateKey()
+			err = pkCfg.ParseLockProxyPrivateKey()
 			if err != nil {
 				log.Fatalf("%v", err)
 			}
@@ -398,7 +398,7 @@ func main() {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
 
-			err = pkCfg.PhraseLockProxyPrivateKey()
+			err = pkCfg.ParseLockProxyPrivateKey()
 			if err != nil {
 				log.Fatalf("%v", err)
 			}
@@ -510,7 +510,7 @@ func main() {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 		}
 
-		err = pkCfg.PhraseLockProxyPrivateKey()
+		err = pkCfg.ParseLockProxyPrivateKey()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -610,7 +610,7 @@ func main() {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 		}
 
-		err = pkCfg.PhraseLockProxyPrivateKey()
+		err = pkCfg.ParseLockProxyPrivateKey()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -884,7 +884,7 @@ func main() {
 			go func() {
 				log.Infof("Checking %s ...", netCfg.Name)
 				time.Sleep(500 * time.Millisecond)
-				paused, err := shutTools.CCMPaused(client, netCfg, pkCfg)
+				paused, err := shutTools.CCMPaused(client, netCfg)
 				if err != nil {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
@@ -933,7 +933,7 @@ func main() {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
 
-			err = pkCfg.PhraseSwapperPrivateKey()
+			err = pkCfg.ParseSwapperPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -999,7 +999,7 @@ func main() {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
 
-			err = pkCfg.PhraseSwapperPrivateKey()
+			err = pkCfg.ParseSwapperPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -1051,7 +1051,7 @@ func main() {
 		if pkCfg == nil {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 		}
-		err = pkCfg.PhraseSwapperPrivateKey()
+		err = pkCfg.ParseSwapperPrivateKey()
 		if err != nil {
 			log.Fatalf(err.Error())
 		}
@@ -1186,7 +1186,7 @@ func main() {
 					log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfgs[i].PrivateKeyNo)
 				}
 
-				err = pkCfg.PhraseLockProxyPrivateKey()
+				err = pkCfg.ParseLockProxyPrivateKey()
 				if err != nil {
 					log.Fatalf("%v", err)
 				}
@@ -1348,7 +1348,7 @@ func main() {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", fromProxy.PrivateKeyNo)
 		}
 
-		err = pkCfg.PhraseLockProxyPrivateKey()
+		err = pkCfg.ParseLockProxyPrivateKey()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -1510,7 +1510,7 @@ func main() {
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
-			err = pkCfg.PhraseSwapperFeeCollectorPrivateKey()
+			err = pkCfg.ParseSwapperFeeCollectorPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -1578,7 +1578,7 @@ func main() {
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
-			err = pkCfg.PhraseWrapperFeeCollectorPrivateKey()
+			err = pkCfg.ParseWrapperFeeCollectorPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -1647,7 +1647,7 @@ func main() {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
 
-			err = pkCfg.PhraseWrapperO3FeeCollectorPrivateKey()
+			err = pkCfg.ParseWrapperO3FeeCollectorPrivateKey()
 			if err != nil {
 				log.Errorf("%v", err)
 				continue
@@ -1775,7 +1775,7 @@ func main() {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 		}
 
-		err = pkCfg.PhraseLockProxyPip4PrivateKey()
+		err = pkCfg.ParseLockProxyPip4PrivateKey()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -1906,7 +1906,7 @@ func main() {
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
 			}
-			err = pkCfg.PhraseLockProxyPip4PrivateKey()
+			err = pkCfg.ParseLockProxyPip4PrivateKey()
 			if err != nil {
 				log.Fatalf("%v", err)
 			}
