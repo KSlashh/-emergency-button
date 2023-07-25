@@ -76,19 +76,20 @@ func init() {
 	flag.BoolVar(&all, "all", false, "shut/restart all in config file")
 	flag.StringVar(&function, "func", "", "choose function to run:\n"+
 		"#### CCM \n"+
-		"  -func shutCCM -mul {1} -conf {./config.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
-		"  -func restartCCM -mul {1} -conf {./config.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
+		"  -func shutCCM -mul {1} -conf {./config.json} -pkconf {./pkconfig.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
+		"  -func restartCCM -mul {1} -conf {./config.json} -pkconf {./pkconfig.json} [ChainID-1] [ChainID-2] ... [ChainID-n] \n"+
 		"  -func checkCCM \n"+
 		"#### LockProxy \n"+
-		"  -func shutToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
-		"  -func bindToken -mul {1} -conf {./config.json} -token {./token.json} \n"+
-		"  -func bindSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
-		"  -func shutSingleToken -mul {1} -conf {./config.json} -token {./token.json} [fromChainId] [toChainId] \n"+
+		"  -func shutToken -mul {1} -conf {./config.json} -token {./token.json} -pkconf {./pkconfig.json}\n"+
+		"  -func bindToken -mul {1} -conf {./config.json} -token {./token.json} -pkconf {./pkconfig.json}\n"+
+		"  -func bindSingleToken -mul {1} -conf {./config.json} -token {./token.json} -pkconf {./pkconfig.json} [fromChainId] [toChainId] \n"+
+		"  -func shutSingleToken -mul {1} -conf {./config.json} -token {./token.json} -pkconf {./pkconfig.json} [fromChainId] [toChainId] \n"+
 		"  -func checkUnbindToken \n"+
 		"  -func checkBindToken \n"+
-		"  -func bindProxy -mul {1} -conf {./config.json} \n"+
+		"  -func bindProxy -mul {1} -conf {./config.json} -pkconf {./pkconfig.json}\n"+
+		"  -func unbindProxy -mul {1} -conf {./config.json} -pkconf {./pkconfig.json}\n"+
 		"#### LockProxyPip4  \n"+
-		" -func deployToken -mul {1} -conf {./config.json} -token {./token.json} -pip4 {false} [fromChainId]\n"+
+		" -func deployToken -mul {1} -conf {./config.json} -token {./token.json} -pkconf {./pkconfig.json} -pip4 {false} [fromChainId]\n"+
 		"#### Swapper \n"+
 		"  -func pauseSwapper \n"+
 		"  -func unpauseSwapper \n"+
@@ -1173,6 +1174,15 @@ func main() {
 			netCfgs = append(netCfgs, netCfg)
 		}
 		for i := 0; i < len(netCfgs); i++ {
+			pkCfg := PKconfig.GetSenderPrivateKey(netCfgs[i].PrivateKeyNo)
+			if pkCfg == nil {
+				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfgs[i].PrivateKeyNo)
+			}
+
+			err = pkCfg.ParseLockProxyPrivateKey()
+			if err != nil {
+				log.Fatalf("%v", err)
+			}
 			go func(i int) {
 				log.Infof("binding proxy at %s...", netCfgs[i].Name)
 				client, err := ethclient.Dial(netCfgs[i].Provider)
@@ -1180,15 +1190,6 @@ func main() {
 					err = fmt.Errorf("fail to dial %s , %s", netCfgs[i].Provider, err)
 					sig <- Msg{netCfgs[i].PolyChainID, err}
 					return
-				}
-				pkCfg := PKconfig.GetSenderPrivateKey(netCfgs[i].PrivateKeyNo)
-				if pkCfg == nil {
-					log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfgs[i].PrivateKeyNo)
-				}
-
-				err = pkCfg.ParseLockProxyPrivateKey()
-				if err != nil {
-					log.Fatalf("%v", err)
 				}
 				for j := 0; j < len(netCfgs); j++ {
 					if i == j {
@@ -1246,6 +1247,105 @@ func main() {
 				log.Error(msg.Err)
 			} else {
 				log.Infof("proxy at chain %d has been bind.", msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
+				break
+			}
+		}
+	case "unbindProxy":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		var netCfgs []*config.Network
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+			}
+
+			netCfgs = append(netCfgs, netCfg)
+		}
+		for i := 0; i < len(netCfgs); i++ {
+			pkCfg := PKconfig.GetSenderPrivateKey(netCfgs[i].PrivateKeyNo)
+			if pkCfg == nil {
+				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfgs[i].PrivateKeyNo)
+			}
+
+			err = pkCfg.ParseLockProxyPrivateKey()
+			if err != nil {
+				log.Fatalf("%v", err)
+			}
+			go func(i int) {
+				log.Infof("unbinding proxy at %s...", netCfgs[i].Name)
+				client, err := ethclient.Dial(netCfgs[i].Provider)
+				if err != nil {
+					err = fmt.Errorf("fail to dial %s , %s", netCfgs[i].Provider, err)
+					sig <- Msg{netCfgs[i].PolyChainID, err}
+					return
+				}
+				for j := 0; j < len(netCfgs); j++ {
+					if i == j {
+						continue
+					}
+					toProxy, err := shutTools.ProxyHashMap(client, netCfgs[i], netCfgs[j].PolyChainID)
+					if err != nil {
+						err = fmt.Errorf(
+							"fail to unbind proxy from chain %d =>to=> chain %d , %s",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID,
+							err)
+						sig <- Msg{netCfgs[i].PolyChainID, err}
+						return
+					}
+					if len(toProxy) == 0 && !force {
+						log.Warnf(
+							"proxy from chain %d =>to=> chain %d is not bind , ignored",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID)
+						continue
+					} else if len(toProxy) == 0 && force {
+						log.Warnf(
+							"proxy from chain %d =>to=> chain %d is not bind, still force unbind",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID)
+					}
+					err = shutTools.BindProxyHash(
+						multiple,
+						client,
+						netCfgs[i],
+						pkCfg,
+						netCfgs[j].PolyChainID,
+						nil)
+					if err != nil {
+						err = fmt.Errorf(
+							"fail to unbind proxy from chain %d =>to=> chain %d , %s",
+							netCfgs[i].PolyChainID,
+							netCfgs[j].PolyChainID,
+							err)
+						sig <- Msg{netCfgs[i].PolyChainID, err}
+						return
+					}
+					log.Infof("unbindProxy : %d =>to=> %d proxy has be unbind", netCfgs[i].PolyChainID, netCfgs[j].PolyChainID)
+				}
+				sig <- Msg{netCfgs[i].PolyChainID, nil}
+			}(i)
+		}
+		cnt := len(netCfgs)
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("proxy at chain %d has been unbind.", msg.ChainId)
 			}
 			if cnt == 0 {
 				log.Info("Done.")
