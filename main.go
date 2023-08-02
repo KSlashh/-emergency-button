@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,7 +10,9 @@ import (
 	"io/ioutil"
 	"math"
 	"math/big"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/KSlashh/emergency-button/config"
@@ -88,6 +91,7 @@ func init() {
 		"  -func checkBindToken \n"+
 		"  -func bindProxy -mul {1} -conf {./config.json} -pkconf {./pkconfig.json}\n"+
 		"  -func unbindProxy -mul {1} -conf {./config.json} -pkconf {./pkconfig.json}\n"+
+		"  -func transferOwner -mul {1} -conf {./config.json} -pkconf {./pkconfig.json} [ChainID-1] [ChainID-2] ... [ChainID-n]\n"+
 		"#### LockProxyPip4  \n"+
 		" -func deployToken -mul {1} -conf {./config.json} -token {./token.json} -pkconf {./pkconfig.json} -pip4 {false} [fromChainId]\n"+
 		"#### Swapper \n"+
@@ -171,6 +175,10 @@ func main() {
 			}()
 			cnt += 1
 		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
@@ -236,6 +244,10 @@ func main() {
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1
+		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
 		}
 		for msg := range sig {
 			cnt -= 1
@@ -1241,6 +1253,10 @@ func main() {
 			}(i)
 		}
 		cnt := len(netCfgs)
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
@@ -2195,6 +2211,123 @@ func main() {
 			}
 			if cnt == 0 {
 				log.Info("Done")
+				break
+			}
+		}
+	case "transferOwner":
+		log.Info("Processing...")
+		args := flag.Args()
+		if all {
+			args = conf.GetNetworkIds()
+		}
+		sig := make(chan Msg, 10)
+		cnt := 0
+
+		reader := bufio.NewReader(os.Stdin)
+
+		fmt.Println("\nPlease type in new owner for LockProxy:")
+		newOwnerStr, err := reader.ReadString('\n')
+		if err != nil {
+			log.Errorf("can not read input, %v", err)
+			return
+		}
+		newOwnerStr = strings.TrimSuffix(newOwnerStr, "\n")
+		newOwner := common.FromHex(newOwnerStr)
+		if !common.IsHexAddress(newOwnerStr) {
+			log.Errorf("invalid input, not address")
+			return
+		}
+
+		fmt.Println("\nPlease repeat new owner for LockProxy:")
+		newOwnerStrRepeat, err := reader.ReadString('\n')
+		if err != nil {
+			log.Errorf("can not read input, %v", err)
+			return
+		}
+		newOwnerStrRepeat = strings.TrimSuffix(newOwnerStrRepeat, "\n")
+		newOwnerRepeat := common.FromHex(newOwnerStrRepeat)
+		if !common.IsHexAddress(newOwnerStrRepeat) {
+			log.Errorf("invalid input, not address")
+			return
+		}
+
+		if bytes.Compare(newOwner, newOwnerRepeat) != 0 {
+			log.Errorf("mismatched input!")
+			return
+		}
+
+		fmt.Println(fmt.Sprintf("\nPlease make sure %x is the new owner of LockProxy, type in yes to continue:", newOwner))
+		reply, err := reader.ReadString('\n')
+		if err != nil {
+			log.Errorf("can not read input, %v", err)
+			return
+		}
+		reply = strings.TrimSuffix(reply, "\n")
+		if strings.Compare(reply, "yes") != 0 {
+			log.Warnf("user canceled Execution")
+			return
+		}
+
+		for i := 0; i < len(args); i++ {
+			id, err := strconv.Atoi(args[i])
+			if err != nil {
+				log.Errorf("can not parse arg %d : %s , %v", i, args[i], err)
+				continue
+			}
+			netCfg := conf.GetNetwork(uint64(id))
+			if netCfg == nil {
+				log.Errorf("network with chainId %d not found in config file", id)
+				continue
+			}
+
+			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
+			if pkCfg == nil {
+				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			}
+
+			err = pkCfg.ParseLockProxyPrivateKey()
+			if err != nil {
+				log.Errorf("%v", err)
+				continue
+			}
+			client, err := ethclient.Dial(netCfg.Provider)
+			if err != nil {
+				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+				continue
+			}
+			go func() {
+				log.Infof("Transfer LockProxy Owner of chain %s ...", netCfg.Name)
+				owner, err := shutTools.LockProxyOwner(client, netCfg)
+				if err != nil {
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				}
+				isOwner := bytes.Compare(owner.Bytes(), newOwner) == 0
+				if isOwner && !force {
+					log.Warnf("%x is already the LockProxyOwner in chain %d, ignored", newOwner, netCfg.PolyChainID)
+					sig <- Msg{netCfg.PolyChainID, err}
+					return
+				} else if isOwner && force {
+					log.Warnf("%x is already the LockProxyOwner in chain %d, still force shut", newOwner, netCfg.PolyChainID)
+				}
+				err = shutTools.TransferOwnership(multiple, client, netCfg, pkCfg, common.BytesToAddress(newOwner))
+				sig <- Msg{netCfg.PolyChainID, err}
+			}()
+			cnt += 1
+		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
+		for msg := range sig {
+			cnt -= 1
+			if msg.Err != nil {
+				log.Error(msg.Err)
+			} else {
+				log.Infof("LockProxyOwnership at chain %d has been transfered.", msg.ChainId)
+			}
+			if cnt == 0 {
+				log.Info("Done.")
 				break
 			}
 		}

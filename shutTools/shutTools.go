@@ -224,6 +224,63 @@ func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.N
 	return WaitTxConfirm(client, tx.Hash())
 }
 
+func TransferOwnership(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, newOwner common.Address) error {
+	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+
+	lockProxyAbi, err := eabi.JSON(strings.NewReader(abi.ILockProxyABI))
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+
+	data, err := lockProxyAbi.Pack("transferOwnership", newOwner)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+
+	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+
+	gasLimit := auth.GasLimit
+	if gasLimit == 0 {
+		msg := ethereum.CallMsg{From: auth.From, To: &conf.LockProxy, GasPrice: auth.GasPrice, Value: auth.Value, Data: data}
+		gasLimit, err = client.EstimateGas(context.Background(), msg)
+		if err != nil {
+			return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+		}
+	}
+
+	tx := types.NewTransaction(auth.Nonce.Uint64(), conf.LockProxy, auth.Value, gasLimit, auth.GasPrice, data)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+
+	signer := types.LatestSignerForChainID(chainId)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+
+	tx, err = types.SignTx(tx, signer, privateKey)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+
+	err = client.SendTransaction(context.Background(), tx)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+	}
+	return WaitTxConfirm(client, tx.Hash())
+}
+
 func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, toChainId uint64, toProxy []byte) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
 	if err != nil {
@@ -313,6 +370,18 @@ func ProxyHashMap(client *ethclient.Client, conf *config.Network, toChainId uint
 			err)
 	}
 	return LockProxyContract.ProxyHashMap(nil, toChainId)
+}
+
+func LockProxyOwner(client *ethclient.Client, conf *config.Network) (owner common.Address, err error) {
+	LockProxyContract, err := abi.NewILockProxyCaller(conf.LockProxy, client)
+	if err != nil {
+		return ADDRESS_ZERO, fmt.Errorf(
+			fmt.Sprintf(
+				"fail while request LockProxyOwner for chain %d,",
+				conf.PolyChainID),
+			err)
+	}
+	return LockProxyContract.Owner(nil)
 }
 
 // Swapper
