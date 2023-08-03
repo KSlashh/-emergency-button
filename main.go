@@ -2283,6 +2283,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseLockProxyPrivateKey()
@@ -2308,7 +2309,7 @@ func main() {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
 				} else if isOwner && force {
-					log.Warnf("%x is already the LockProxyOwner in chain %d, still force shut", newOwner, netCfg.PolyChainID)
+					log.Warnf("%x is already the LockProxyOwner in chain %d, still force transfer", newOwner, netCfg.PolyChainID)
 				}
 				err = shutTools.TransferOwnership(multiple, client, netCfg, pkCfg, common.BytesToAddress(newOwner))
 				sig <- Msg{netCfg.PolyChainID, err}

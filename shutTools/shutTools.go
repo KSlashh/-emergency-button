@@ -227,27 +227,27 @@ func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.N
 func TransferOwnership(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey, newOwner common.Address) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+		return fmt.Errorf(fmt.Sprintf("fail -0- while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
 	}
 
 	chainId, err := client.ChainID(context.Background())
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+		return fmt.Errorf(fmt.Sprintf("fail -1- while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
 	}
 
 	lockProxyAbi, err := eabi.JSON(strings.NewReader(abi.ILockProxyABI))
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+		return fmt.Errorf(fmt.Sprintf("fail -2- while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
 	}
 
 	data, err := lockProxyAbi.Pack("transferOwnership", newOwner)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+		return fmt.Errorf(fmt.Sprintf("fail -3- while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
 	}
 
 	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+		return fmt.Errorf(fmt.Sprintf("fail -4- while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
 	}
 
 	gasLimit := auth.GasLimit
@@ -255,28 +255,22 @@ func TransferOwnership(gasMultiple float64, client *ethclient.Client, conf *conf
 		msg := ethereum.CallMsg{From: auth.From, To: &conf.LockProxy, GasPrice: auth.GasPrice, Value: auth.Value, Data: data}
 		gasLimit, err = client.EstimateGas(context.Background(), msg)
 		if err != nil {
-			return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+			return fmt.Errorf(fmt.Sprintf("fail -5- while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
 		}
 	}
 
 	tx := types.NewTransaction(auth.Nonce.Uint64(), conf.LockProxy, auth.Value, gasLimit, auth.GasPrice, data)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
-	}
 
 	signer := types.LatestSignerForChainID(chainId)
-	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
-	}
 
 	tx, err = types.SignTx(tx, signer, privateKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+		return fmt.Errorf(fmt.Sprintf("fail -6- while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
 	}
 
 	err = client.SendTransaction(context.Background(), tx)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
+		return fmt.Errorf(fmt.Sprintf("fail -7- while try to call transferOwnership() for chain %d,", conf.PolyChainID), err)
 	}
 	return WaitTxConfirm(client, tx.Hash())
 }
