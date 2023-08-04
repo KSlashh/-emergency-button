@@ -3,12 +3,13 @@ package shutTools
 import (
 	"context"
 	"fmt"
-	"github.com/KSlashh/emergency-button/abi"
-	"github.com/KSlashh/emergency-button/config"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/polynetwork/contract-tools/abi"
+	"github.com/polynetwork/contract-tools/config"
 )
 
 func AssetLPMap(client *ethclient.Client, conf *config.Network, token common.Address) (targetToken common.Address, err error) {

@@ -11,9 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
-	"github.com/KSlashh/emergency-button/abi"
-	"github.com/KSlashh/emergency-button/config"
-	"github.com/KSlashh/emergency-button/log"
+	"github.com/polynetwork/contract-tools/abi"
+	"github.com/polynetwork/contract-tools/config"
+	"github.com/polynetwork/contract-tools/log"
 
 	"github.com/ethereum/go-ethereum"
 	eabi "github.com/ethereum/go-ethereum/accounts/abi"
@@ -34,27 +34,27 @@ var ADDRESS_ZERO common.Address = common.HexToAddress("0x00000000000000000000000
 func ShutCCM(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.CCMPOwnerPrivateKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -0- while shut CCM of %s ,", conf.Name), err)
 	}
 	CCMPContract, err := abi.NewICCMP(conf.EthCrossChainManagerProxy, client)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -1- while shut CCM of %s ,", conf.Name), err)
 	}
 	chainId, err := client.ChainID(context.Background())
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -2- while shut CCM of %s ,", conf.Name), err)
 	}
 	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -3- while shut CCM of %s ,", conf.Name), err)
 	}
 	tx, err := CCMPContract.PauseEthCrossChainManager(auth)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -4-  while shut CCM of %s ,", conf.Name), err)
 	}
 	err = WaitTxConfirm(client, tx.Hash())
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while shut CCM of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -5- while shut CCM of %s ,", conf.Name), err)
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
+				"fail -0- while bind Token %s from chain %d =>to=> asset %x at chain %d,",
 				token.Hex(),
 				conf.PolyChainID,
 				toAsset,
@@ -112,7 +112,7 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
+				"fail -1- while bind Token %s from chain %d =>to=> asset %x at chain %d,",
 				token.Hex(),
 				conf.PolyChainID,
 				toAsset,
@@ -123,7 +123,7 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
+				"fail -2- while bind Token %s from chain %d =>to=> asset %x at chain %d,",
 				token.Hex(),
 				conf.PolyChainID,
 				toAsset,
@@ -134,7 +134,7 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
+				"fail -3- while bind Token %s from chain %d =>to=> asset %x at chain %d,",
 				token.Hex(),
 				conf.PolyChainID,
 				toAsset,
@@ -145,7 +145,7 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
+				"fail -4- while bind Token %s from chain %d =>to=> asset %x at chain %d,",
 				token.Hex(),
 				conf.PolyChainID,
 				toAsset,
@@ -156,7 +156,7 @@ func BindToken(gasMultiple float64, client *ethclient.Client, conf *config.Netwo
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Token %s from chain %d =>to=> asset %x at chain %d,",
+				"fail -5- while bind Token %s from chain %d =>to=> asset %x at chain %d,",
 				token.Hex(),
 				conf.PolyChainID,
 				toAsset,
@@ -170,27 +170,27 @@ func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.N
 
 	privateKey, err := crypto.HexToECDSA(pkCfg.LockProxyOwnerPrivateKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -0- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 
 	chainId, err := client.ChainID(context.Background())
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -1- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 
 	lockProxyAbi, err := eabi.JSON(strings.NewReader(abi.ILockProxyABI))
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -2- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 
 	data, err := lockProxyAbi.Pack("bindProxyHash", toChainId, toProxy)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -3- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 
 	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -4- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 
 	gasLimit := auth.GasLimit
@@ -198,28 +198,28 @@ func BindProxyHash(gasMultiple float64, client *ethclient.Client, conf *config.N
 		msg := ethereum.CallMsg{From: auth.From, To: &conf.LockProxy, GasPrice: auth.GasPrice, Value: auth.Value, Data: data}
 		gasLimit, err = client.EstimateGas(context.Background(), msg)
 		if err != nil {
-			return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+			return fmt.Errorf(fmt.Sprintf("fail -5- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 		}
 	}
 
 	tx := types.NewTransaction(auth.Nonce.Uint64(), conf.LockProxy, auth.Value, gasLimit, auth.GasPrice, data)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -6- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 
 	signer := types.LatestSignerForChainID(chainId)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -7- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 
 	tx, err = types.SignTx(tx, signer, privateKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -8- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 
 	err = client.SendTransaction(context.Background(), tx)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
+		return fmt.Errorf(fmt.Sprintf("fail -9- while try to call bindProxyHash() from chain %d =>to=> asset %x at chain %d,", conf.PolyChainID, toProxy, toChainId), err)
 	}
 	return WaitTxConfirm(client, tx.Hash())
 }
@@ -280,7 +280,7 @@ func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				"fail -0- while bind Proxy from chain %d =>to=> asset %x at chain %d,",
 				conf.PolyChainID,
 				toProxy,
 				toChainId),
@@ -290,7 +290,7 @@ func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				"fail -1- while bind Proxy from chain %d =>to=> asset %x at chain %d,",
 				conf.PolyChainID,
 				toProxy,
 				toChainId),
@@ -300,7 +300,7 @@ func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				"fail -2- while bind Proxy from chain %d =>to=> asset %x at chain %d,",
 				conf.PolyChainID,
 				toProxy,
 				toChainId),
@@ -310,7 +310,7 @@ func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				"fail -3-  while bind Proxy from chain %d =>to=> asset %x at chain %d,",
 				conf.PolyChainID,
 				toProxy,
 				toChainId),
@@ -320,7 +320,7 @@ func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				"fail -4- while bind Proxy from chain %d =>to=> asset %x at chain %d,",
 				conf.PolyChainID,
 				toProxy,
 				toChainId),
@@ -330,7 +330,7 @@ func BindProxyHashOld(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Proxy from chain %d =>to=> asset %x at chain %d,",
+				"fail -5- while bind Proxy from chain %d =>to=> asset %x at chain %d,",
 				conf.PolyChainID,
 				toProxy,
 				toChainId),
@@ -383,7 +383,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if conf.Swapper == ADDRESS_ZERO {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, swapper address in config is ZERO",
+				"fail -0- while extract fee at Swapper at chain %d, swapper address in config is ZERO",
 				conf.PolyChainID),
 		)
 	}
@@ -391,7 +391,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
+				"fail -1- while extract fee at Swapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -399,7 +399,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
+				"fail -2- while extract fee at Swapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -407,7 +407,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
+				"fail -3- while extract fee at Swapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -415,7 +415,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
+				"fail -4- while extract fee at Swapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -423,7 +423,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
+				"fail -5- while extract fee at Swapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -431,7 +431,7 @@ func ExtractFeeSwapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at Swapper at chain %d, ",
+				"fail -6- while extract fee at Swapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -443,7 +443,7 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
+				"fail -0- while register pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -452,7 +452,7 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
+				"fail -1- while register pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -461,7 +461,7 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
+				"fail -2- while register pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -470,7 +470,7 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
+				"fail -3- while register pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -479,7 +479,7 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
+				"fail -4- while register pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -488,7 +488,7 @@ func RegisterPool(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register pool %d at chain %d, ",
+				"fail -5- while register pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -501,7 +501,7 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
+				"fail -0- while bind Asset %x at pool %d at chain %d, ",
 				fromAssetHash,
 				poolId,
 				conf.PolyChainID),
@@ -511,7 +511,7 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
+				"fail -1- while bind Asset %x at pool %d at chain %d, ",
 				fromAssetHash,
 				poolId,
 				conf.PolyChainID),
@@ -521,7 +521,7 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
+				"fail -2- while bind Asset %x at pool %d at chain %d, ",
 				fromAssetHash,
 				poolId,
 				conf.PolyChainID),
@@ -531,7 +531,7 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
+				"fail -3- while bind Asset %x at pool %d at chain %d, ",
 				fromAssetHash,
 				poolId,
 				conf.PolyChainID),
@@ -541,7 +541,7 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
+				"fail -4- while bind Asset %x at pool %d at chain %d, ",
 				fromAssetHash,
 				poolId,
 				conf.PolyChainID),
@@ -551,7 +551,7 @@ func BindAsserAndPool(gasMultiple float64, client *ethclient.Client, conf *confi
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind Asset %x at pool %d at chain %d, ",
+				"fail -5- while bind Asset %x at pool %d at chain %d, ",
 				fromAssetHash,
 				poolId,
 				conf.PolyChainID),
@@ -565,7 +565,7 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
+				"fail -0- while bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -574,7 +574,7 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
+				"fail -1- while bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -583,7 +583,7 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
+				"fail -2- while bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -592,7 +592,7 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
+				"fail -3- while bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -601,7 +601,7 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
+				"fail -4- while bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -610,7 +610,7 @@ func Bind3Asset(gasMultiple float64, client *ethclient.Client, conf *config.Netw
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while bind 3 Asset at pool %d at chain %d, ",
+				"fail -5- while bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -623,7 +623,7 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				"fail -0- while register and bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -632,7 +632,7 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				"fail -1- while register and bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -641,7 +641,7 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				"fail -2- while register and bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -650,7 +650,7 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				"fail -3- while register and bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -659,7 +659,7 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				"fail -4- while register and bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -668,7 +668,7 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while register and bind 3 Asset at pool %d at chain %d, ",
+				"fail -5- while register and bind 3 Asset at pool %d at chain %d, ",
 				poolId,
 				conf.PolyChainID),
 			err)
@@ -679,27 +679,27 @@ func RegisterPoolWith3Assets(gasMultiple float64, client *ethclient.Client, conf
 func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -0- while pause swapper of %s ,", conf.Name), err)
 	}
 	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -1- while pause swapper of %s ,", conf.Name), err)
 	}
 	chainId, err := client.ChainID(context.Background())
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -2- while pause swapper of %s ,", conf.Name), err)
 	}
 	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -3- while pause swapper of %s ,", conf.Name), err)
 	}
 	tx, err := SwapperContract.Pause(auth)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -4- while pause swapper of %s ,", conf.Name), err)
 	}
 	err = WaitTxConfirm(client, tx.Hash())
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while pause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -5- while pause swapper of %s ,", conf.Name), err)
 	}
 	return nil
 }
@@ -707,32 +707,32 @@ func PauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Ne
 func UnpauseSwapper(gasMultiple float64, client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) error {
 	privateKey, err := crypto.HexToECDSA(pkCfg.SwapperOwnerPrivateKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -0- while unpause swapper of %s ,", conf.Name), err)
 	}
 	SwapperContract, err := abi.NewISwapper(conf.Swapper, client)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -1- while unpause swapper of %s ,", conf.Name), err)
 	}
 	chainId, err := client.ChainID(context.Background())
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -2- while unpause swapper of %s ,", conf.Name), err)
 	}
 	auth, err := MakeAuth(client, privateKey, DefaultGasLimit, gasMultiple, chainId)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -3- while unpause swapper of %s ,", conf.Name), err)
 	}
 	tx, err := SwapperContract.Unpause(auth)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -4- while unpause swapper of %s ,", conf.Name), err)
 	}
 	err = WaitTxConfirm(client, tx.Hash())
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("fail while unpause swapper of %s ,", conf.Name), err)
+		return fmt.Errorf(fmt.Sprintf("fail -5-  while unpause swapper of %s ,", conf.Name), err)
 	}
 	return nil
 }
 
-func SwapperPaused(client *ethclient.Client, conf *config.Network, pkCfg *config.PrivateKey) (paused bool, err error) {
+func SwapperPaused(client *ethclient.Client, conf *config.Network) (paused bool, err error) {
 	SwapperContract, err := abi.NewISwapperCaller(conf.Swapper, client)
 	if err != nil {
 		return false, fmt.Errorf(fmt.Sprintf("fail while request Swapper of %s ,", conf.Name), err)
@@ -761,7 +761,7 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if conf.Wrapper == ADDRESS_ZERO {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
+				"fail -0- while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
 				conf.PolyChainID),
 		)
 	}
@@ -769,7 +769,7 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
+				"fail -1- while extract fee at PolyWrapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -777,7 +777,7 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
+				"fail -2- while extract fee at PolyWrapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -785,7 +785,7 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
+				"fail -3- while extract fee at PolyWrapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -793,7 +793,7 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
+				"fail -4- while extract fee at PolyWrapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -801,7 +801,7 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
+				"fail -5- while extract fee at PolyWrapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -809,7 +809,7 @@ func ExtractFeeWrapper(gasMultiple float64, client *ethclient.Client, conf *conf
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, ",
+				"fail -6- while extract fee at PolyWrapper at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -820,7 +820,7 @@ func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *co
 	if conf.WrapperO3 == ADDRESS_ZERO {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
+				"fail -0- while extract fee at PolyWrapper at chain %d, wrapper address in config is ZERO",
 				conf.PolyChainID),
 		)
 	}
@@ -828,7 +828,7 @@ func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *co
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
+				"fail -1- while extract fee at WrapperO3 at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -836,7 +836,7 @@ func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *co
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
+				"fail -2- while extract fee at WrapperO3 at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -844,7 +844,7 @@ func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *co
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
+				"fail -3- while extract fee at WrapperO3 at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -852,7 +852,7 @@ func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *co
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
+				"fail -4- while extract fee at WrapperO3 at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -860,7 +860,7 @@ func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *co
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
+				"fail -5- while extract fee at WrapperO3 at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}
@@ -868,7 +868,7 @@ func ExtractFeeWrapperO3(gasMultiple float64, client *ethclient.Client, conf *co
 	if err != nil {
 		return fmt.Errorf(
 			fmt.Sprintf(
-				"fail while extract fee at WrapperO3 at chain %d, ",
+				"fail -6- while extract fee at WrapperO3 at chain %d, ",
 				conf.PolyChainID),
 			err)
 	}

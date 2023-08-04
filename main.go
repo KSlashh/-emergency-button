@@ -15,11 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KSlashh/emergency-button/config"
-	"github.com/KSlashh/emergency-button/log"
-	"github.com/KSlashh/emergency-button/shutTools"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/polynetwork/contract-tools/config"
+	"github.com/polynetwork/contract-tools/log"
+	"github.com/polynetwork/contract-tools/shutTools"
 )
 
 var ADDRESS_ZERO common.Address = common.HexToAddress("0x0000000000000000000000000000000000000000")
@@ -144,6 +144,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseCCMPrivateKey()
@@ -214,6 +215,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseCCMPrivateKey()
@@ -294,6 +296,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseLockProxyPrivateKey()
@@ -364,6 +367,10 @@ func main() {
 			}(i)
 		}
 		cnt := len(tokens)
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
@@ -409,6 +416,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseLockProxyPrivateKey()
@@ -481,6 +489,10 @@ func main() {
 			}(i)
 		}
 		cnt := len(tokens)
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
@@ -507,10 +519,12 @@ func main() {
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+			return
 		}
 		token := tokenConfig.GetToken(uint64(id))
 		if token == nil {
 			log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			return
 		}
 		address := token.Address
 		netCfg := conf.GetNetwork(uint64(id))
@@ -521,6 +535,7 @@ func main() {
 		pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 		if pkCfg == nil {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			return
 		}
 
 		err = pkCfg.ParseLockProxyPrivateKey()
@@ -532,10 +547,12 @@ func main() {
 		id, err = strconv.Atoi(args[1])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 1, args[1], err)
+			return
 		}
 		token = tokenConfig.GetToken(uint64(id))
 		if token == nil {
 			log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			return
 		}
 		address = token.Address
 		netCfg = conf.GetNetwork(uint64(id))
@@ -607,10 +624,12 @@ func main() {
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+			return
 		}
 		token := tokenConfig.GetToken(uint64(id))
 		if token == nil {
 			log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			return
 		}
 		address := token.Address
 		netCfg := conf.GetNetwork(uint64(id))
@@ -621,6 +640,7 @@ func main() {
 		pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 		if pkCfg == nil {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			return
 		}
 
 		err = pkCfg.ParseLockProxyPrivateKey()
@@ -631,6 +651,7 @@ func main() {
 		id, err = strconv.Atoi(args[1])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 1, args[1], err)
+			return
 		}
 		toChainId := uint64(id)
 
@@ -714,12 +735,14 @@ func main() {
 			address := token.Address
 			netCfg := conf.GetNetwork(uint64(id))
 			if netCfg == nil {
-				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+				log.Errorf("network with chainId %d not found in %s", id, confFile)
+				continue
 			}
 
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			tokens = append(tokens, &Token{uint64(id), address, netCfg, pkCfg})
@@ -802,12 +825,14 @@ func main() {
 			address := token.Address
 			netCfg := conf.GetNetwork(uint64(id))
 			if netCfg == nil {
-				log.Fatalf("network with chainId %d not found in %s", id, confFile)
+				log.Errorf("network with chainId %d not found in %s", id, confFile)
+				continue
 			}
 
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			tokens = append(tokens, &Token{uint64(id), address, netCfg, pkCfg})
@@ -887,6 +912,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			client, err := ethclient.Dial(netCfg.Provider)
@@ -910,6 +936,10 @@ func main() {
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1
+		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
 		}
 		for msg := range sig {
 			cnt -= 1
@@ -944,6 +974,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseSwapperPrivateKey()
@@ -958,7 +989,7 @@ func main() {
 			}
 			go func() {
 				log.Infof("Pausing swapper at %s ...", netCfg.Name)
-				paused, err := shutTools.SwapperPaused(client, netCfg, pkCfg)
+				paused, err := shutTools.SwapperPaused(client, netCfg)
 				if err != nil {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
@@ -974,6 +1005,10 @@ func main() {
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1
+		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
 		}
 		for msg := range sig {
 			cnt -= 1
@@ -1010,6 +1045,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseSwapperPrivateKey()
@@ -1024,7 +1060,7 @@ func main() {
 			}
 			go func() {
 				log.Infof("Unpausing swapper at %s ...", netCfg.Name)
-				paused, err := shutTools.SwapperPaused(client, netCfg, pkCfg)
+				paused, err := shutTools.SwapperPaused(client, netCfg)
 				if err != nil {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
@@ -1040,6 +1076,10 @@ func main() {
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1
+		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
 		}
 		for msg := range sig {
 			cnt -= 1
@@ -1063,6 +1103,7 @@ func main() {
 		pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 		if pkCfg == nil {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			return
 		}
 		err = pkCfg.ParseSwapperPrivateKey()
 		if err != nil {
@@ -1105,11 +1146,6 @@ func main() {
 				continue
 			}
 
-			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
-			if pkCfg == nil {
-				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
-			}
-
 			client, err := ethclient.Dial(netCfg.Provider)
 			if err != nil {
 				log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
@@ -1118,7 +1154,7 @@ func main() {
 			go func() {
 				log.Infof("Checking %s ...", netCfg.Name)
 				time.Sleep(500 * time.Millisecond)
-				paused, err := shutTools.SwapperPaused(client, netCfg, pkCfg)
+				paused, err := shutTools.SwapperPaused(client, netCfg)
 				if err != nil {
 					sig <- Msg{netCfg.PolyChainID, err}
 					return
@@ -1131,6 +1167,10 @@ func main() {
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1
+		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
 		}
 		for msg := range sig {
 			cnt -= 1
@@ -1189,6 +1229,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfgs[i].PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfgs[i].PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseLockProxyPrivateKey()
@@ -1294,6 +1335,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfgs[i].PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfgs[i].PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseLockProxyPrivateKey()
@@ -1356,6 +1398,10 @@ func main() {
 			}(i)
 		}
 		cnt := len(netCfgs)
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
@@ -1453,6 +1499,7 @@ func main() {
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+			return
 		}
 		fromProxy := conf.GetNetwork(uint64(id))
 		if fromProxy == nil {
@@ -1462,6 +1509,7 @@ func main() {
 		pkCfg := PKconfig.GetSenderPrivateKey(fromProxy.PrivateKeyNo)
 		if pkCfg == nil {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", fromProxy.PrivateKeyNo)
+			return
 		}
 
 		err = pkCfg.ParseLockProxyPrivateKey()
@@ -1472,6 +1520,7 @@ func main() {
 		id, err = strconv.Atoi(args[1])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 1, args[1], err)
+			return
 		}
 		toProxy := conf.GetNetwork(uint64(id))
 		if toProxy == nil {
@@ -1592,6 +1641,10 @@ func main() {
 			}()
 			cnt += 1
 		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
@@ -1625,6 +1678,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				return
 			}
 			err = pkCfg.ParseSwapperFeeCollectorPrivateKey()
 			if err != nil {
@@ -1657,6 +1711,10 @@ func main() {
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1
+		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
 		}
 		for msg := range sig {
 			cnt -= 1
@@ -1693,6 +1751,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 			err = pkCfg.ParseWrapperFeeCollectorPrivateKey()
 			if err != nil {
@@ -1725,6 +1784,10 @@ func main() {
 				sig <- Msg{netCfg.PolyChainID, err}
 			}()
 			cnt += 1
+		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
 		}
 		for msg := range sig {
 			cnt -= 1
@@ -1761,6 +1824,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 
 			err = pkCfg.ParseWrapperO3FeeCollectorPrivateKey()
@@ -1795,6 +1859,10 @@ func main() {
 			}()
 			cnt += 1
 		}
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
@@ -1816,10 +1884,12 @@ func main() {
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+			return
 		}
 		netCfg := conf.GetNetwork(uint64(id))
 		if netCfg == nil {
 			log.Errorf("network with chainId %d not found in config file", id)
+			return
 		}
 
 		tokenConfig, err := config.LoadToken(tokenFile)
@@ -1829,17 +1899,20 @@ func main() {
 		client, err := ethclient.Dial(netCfg.Provider)
 		if err != nil {
 			log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+			return
 		}
 
 		pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 		if pkCfg == nil {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			return
 		}
 		fmt.Println("enter", netCfg.PrivateKeyNo)
 
 		LptokenAddress, err := shutTools.DeployToken(multiple, client, netCfg, pkCfg, tokenConfig, pip4)
 		if err != nil {
 			log.Errorf("fail to dial client %s of network %d", netCfg.Provider, id)
+			return
 		}
 
 		log.Info("token deploy success, hash is %s", LptokenAddress)
@@ -1874,10 +1947,12 @@ func main() {
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+			return
 		}
 		token := tokenConfig.GetToken(uint64(id))
 		if token == nil {
 			log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			return
 		}
 		address := token.Address
 		lpaddress := token.LPAddress
@@ -1889,6 +1964,7 @@ func main() {
 		pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 		if pkCfg == nil {
 			log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+			return
 		}
 
 		err = pkCfg.ParseLockProxyPip4PrivateKey()
@@ -1900,10 +1976,12 @@ func main() {
 		id, err = strconv.Atoi(args[1])
 		if err != nil {
 			log.Errorf("can not parse arg %d : %s , %v", 1, args[1], err)
+			return
 		}
 		token = tokenConfig.GetToken(uint64(id))
 		if token == nil {
 			log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+			return
 		}
 		address = token.Address
 		tolpaddress := token.LPAddress
@@ -2007,10 +2085,12 @@ func main() {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
 				log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+				continue
 			}
 			token := tokenConfig.GetToken(uint64(id))
 			if token == nil {
 				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+				continue
 			}
 			address := token.Address
 			lpaddress := token.LPAddress
@@ -2021,6 +2101,7 @@ func main() {
 			pkCfg := PKconfig.GetSenderPrivateKey(netCfg.PrivateKeyNo)
 			if pkCfg == nil {
 				log.Errorf("privatekey with chainId %d not found in PKconfig file", netCfg.PrivateKeyNo)
+				continue
 			}
 			err = pkCfg.ParseLockProxyPip4PrivateKey()
 			if err != nil {
@@ -2115,6 +2196,10 @@ func main() {
 			}(i)
 		}
 		cnt := len(tokens)
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
@@ -2144,10 +2229,12 @@ func main() {
 			id, err := strconv.Atoi(args[i])
 			if err != nil {
 				log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+				return
 			}
 			token := tokenConfig.GetToken(uint64(id))
 			if token == nil {
 				log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+				return
 			}
 			for j := 0; j < len(args); j++ {
 				if i == j {
@@ -2156,10 +2243,12 @@ func main() {
 				id_j, err := strconv.Atoi(args[j])
 				if err != nil {
 					log.Errorf("can not parse arg %d : %s , %v", 0, args[0], err)
+					continue
 				}
 				tokenj := tokenConfig.GetToken(uint64(id_j))
 				if tokenj == nil {
 					log.Errorf("token with chainId %d not found in %s", id, tokenFile)
+					continue
 				}
 				tokens.Address = append(tokens.Address, token.Address)
 				tokens.LpAddress = append(tokens.LpAddress, token.LPAddress)
@@ -2202,6 +2291,10 @@ func main() {
 			}(i)
 		}
 		cnt := len(tokenlist)
+		if cnt == 0 {
+			log.Info("Done.")
+			return
+		}
 		for msg := range sig {
 			cnt -= 1
 			if msg.Err != nil {
